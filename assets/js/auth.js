@@ -1,87 +1,225 @@
+/* ============================================================
+   TOOL MINHIOS — auth.js (REBUILD with safety timers)
+   ============================================================ */
 function _$(id) { return document.getElementById(id); }
-function _setLoading(spin, btn, text, load) { var sp = _$(spin), bt = _$(btn); if (sp) sp.style.display = load ? 'inline-block' : 'none'; if (bt) bt.innerHTML = text; }
-function _setError(m) { var b = _$('loginError'); if (b) b.textContent = m || ''; }
-function _setKeyError(m) { var b = _$('keyErr'); if (b) b.textContent = m || ''; }
 
+function _setLoading(spinId, btnTextId, text, load) {
+  var sp = _$(spinId);
+  var bt = _$(btnTextId);
+  if (sp) sp.style.display = load ? 'inline-block' : 'none';
+  if (bt) bt.innerHTML = text;
+}
+function _setError(m)    { var b = _$('loginError'); if (b) b.textContent = m || ''; }
+function _setKeyError(m) { var b = _$('keyErr');     if (b) b.textContent = m || ''; }
+
+/* Biến bảo hiểm: tránh xung đột khi user bấm login nhiều lần */
+var _loginBusy = false;
+var _regBusy   = false;
+
+/* ---------- IP ---------- */
 var _cachedIP = null;
 function getIP() {
   if (_cachedIP) return Promise.resolve(_cachedIP);
-  return new Promise(function(res) {
+  return new Promise(function (res) {
     var x = new XMLHttpRequest();
     x.open('GET', 'https://api.ipify.org?format=json', true);
     x.timeout = 3000;
-    x.onload = function() { try { var d = JSON.parse(x.responseText); if (d.ip) { _cachedIP = d.ip; return res(d.ip); } } catch(e) {} res('unknown'); };
-    x.onerror = x.ontimeout = function() { res('unknown'); };
+    x.onload  = function () {
+      try { var d = JSON.parse(x.responseText); if (d.ip) { _cachedIP = d.ip; return res(d.ip); } }
+      catch (e) {}
+      res('unknown');
+    };
+    x.onerror = x.ontimeout = function () { res('unknown'); };
     x.send();
   });
 }
 
+/* ---------- TAB ---------- */
 function switchTab(tab) {
   _setError('');
-  var tl = _$('tabLogin'), tr = _$('tabReg'), fl = _$('formLogin'), fr = _$('formReg');
-  if (tab === 'login') { if (tl) tl.classList.add('active'); if (tr) tr.classList.remove('active'); if (fl) fl.style.display = ''; if (fr) fr.style.display = 'none'; }
-  else { if (tr) tr.classList.add('active'); if (tl) tl.classList.remove('active'); if (fr) fr.style.display = ''; if (fl) fl.style.display = 'none'; }
+  var tl = _$('tabLogin'), tr = _$('tabReg');
+  var fl = _$('formLogin'), fr = _$('formReg');
+  if (tab === 'login') {
+    if (tl) tl.classList.add('active');
+    if (tr) tr.classList.remove('active');
+    if (fl) fl.style.display = '';
+    if (fr) fr.style.display = 'none';
+  } else {
+    if (tr) tr.classList.add('active');
+    if (tl) tl.classList.remove('active');
+    if (fr) fr.style.display = '';
+    if (fl) fl.style.display = 'none';
+  }
 }
 
+/* ---------- HELPERS ---------- */
+function _loginBtnIdle() {
+  _setLoading('loginSpinner', 'btnLoginText',
+    '<i class="fa-solid fa-right-to-bracket"></i> ĐĂNG NHẬP', false);
+}
+function _regBtnIdle() {
+  _setLoading('regSpinner', 'btnRegText',
+    '<i class="fa-solid fa-user-plus"></i> ĐĂNG KÝ', false);
+}
+
+/* ---------- REGISTER ---------- */
 function doRegister() {
+  if (_regBusy) return;
   _setError('');
-  var name = (_$('regName') ? _$('regName').value : '').trim();
+
+  var name  = (_$('regName')  ? _$('regName').value  : '').trim();
   var email = (_$('regEmail') ? _$('regEmail').value : '').trim().toLowerCase();
-  var p1 = _$('regPass') ? _$('regPass').value : '';
-  var p2 = _$('regPass2') ? _$('regPass2').value : '';
+  var p1    = _$('regPass')   ? _$('regPass').value  : '';
+  var p2    = _$('regPass2')  ? _$('regPass2').value : '';
+
   if (!name || !email || !p1 || !p2) return _setError('Vui lòng nhập đầy đủ!');
-  if (p1.length < 6) return _setError('Pass từ 6 ký tự!');
-  if (p1 !== p2) return _setError('Pass không khớp!');
+  if (p1.length < 6)                 return _setError('Mật khẩu từ 6 ký tự!');
+  if (p1 !== p2)                     return _setError('Mật khẩu không khớp!');
+
+  _regBusy = true;
   _setLoading('regSpinner', 'btnRegText', 'ĐANG XỬ LÝ...', true);
-  api('register', { name: name, email: email, password: p1 }).then(function(data) {
-    if (data && data.success) { alert('ĐĂNG KÝ THÀNH CÔNG!'); switchTab('login'); }
-    else _setError((data && data.error) || 'Lỗi!');
-  }).catch(function(e) { _setError(e.message); }).then(function() { _setLoading('regSpinner', 'btnRegText', 'ĐĂNG KÝ', false); });
+
+  var safety = setTimeout(function () {
+    if (!_regBusy) return;
+    _setError('Server không phản hồi. Thử lại sau!');
+    _regBtnIdle();
+    _regBusy = false;
+  }, 14000);
+
+  api('register', { name: name, email: email, password: p1 })
+    .then(function (data) {
+      clearTimeout(safety);
+      if (data && data.success) {
+        alert('ĐĂNG KÝ THÀNH CÔNG! Hãy đăng nhập.');
+        switchTab('login');
+        var le = _$('loginEmail'); if (le) le.value = email;
+        var lp = _$('loginPass');  if (lp) lp.focus();
+      } else {
+        _setError((data && data.error) || 'Đăng ký thất bại!');
+      }
+    })
+    .catch(function (e) {
+      clearTimeout(safety);
+      _setError((e && e.message) || 'Lỗi kết nối!');
+    })
+    .then(function () {
+      _regBtnIdle();
+      _regBusy = false;
+    });
 }
 
+/* ---------- LOGIN ---------- */
 function doLogin() {
+  if (_loginBusy) return;
   _setError('');
+
   var email = (_$('loginEmail') ? _$('loginEmail').value : '').trim().toLowerCase();
-  var pass = _$('loginPass') ? _$('loginPass').value : '';
-  if (!email || !pass) return _setError('Nhập đầy đủ!');
+  var pass  = _$('loginPass')   ? _$('loginPass').value  : '';
+
+  if (!email || !pass) return _setError('Vui lòng nhập đầy đủ!');
+
+  _loginBusy = true;
   _setLoading('loginSpinner', 'btnLoginText', 'ĐANG ĐĂNG NHẬP...', true);
-  api('login', { email: email, password: pass }).then(function(data) {
-    if (data && data.success && data.user) {
-      if (email === ADMIN_EMAIL) data.user.is_admin = 1;
-      setSessionData(email, pass, data.user);
-      if (typeof enterApp === 'function') enterApp();
-    } else _setError((data && data.error) || 'Sai tài khoản!');
-  }).catch(function(e) { _setError(e.message); }).then(function() { _setLoading('loginSpinner', 'btnLoginText', 'ĐĂNG NHẬP', false); });
+
+  var safety = setTimeout(function () {
+    if (!_loginBusy) return;
+    _setError('Server không phản hồi (quá 14s). Kiểm tra /api/index.php?action=ping');
+    _loginBtnIdle();
+    _loginBusy = false;
+  }, 14000);
+
+  api('login', { email: email, password: pass })
+    .then(function (data) {
+      clearTimeout(safety);
+      if (data && data.success && data.user) {
+        if (email === ADMIN_EMAIL) data.user.is_admin = 1;
+        setSessionData(email, pass, data.user);
+        try {
+          if (typeof enterApp === 'function') enterApp();
+          else _setError('Lỗi: app.js chưa load');
+        } catch (e) {
+          _setError('Lỗi khởi tạo: ' + (e.message || e));
+        }
+      } else {
+        _setError((data && data.error) || 'Sai tài khoản hoặc mật khẩu!');
+      }
+    })
+    .catch(function (e) {
+      clearTimeout(safety);
+      _setError((e && e.message) || 'Lỗi kết nối!');
+    })
+    .then(function () {
+      _loginBtnIdle();
+      _loginBusy = false;
+    });
 }
 
-function doLogout() { if (!confirm('Đăng xuất?')) return; clearSession(); location.reload(); }
+/* ---------- LOGOUT ---------- */
+function doLogout() {
+  if (!confirm('Đăng xuất?')) return;
+  clearSession();
+  location.reload();
+}
 
+/* ---------- ACTIVATE KEY ---------- */
 function activateKey() {
   _setKeyError('');
   var key = (_$('keyInput') ? _$('keyInput').value : '').trim().toUpperCase();
-  if (!key) return _setKeyError('Nhập key!');
-  var s = getSession(); if (!s) return _setKeyError('Đăng nhập lại!');
-  api('key_activate', { email: s.email, password: s.password, code: key }).then(function(data) {
-    if (data && data.success) { alert('KÍCH HOẠT THÀNH CÔNG! +' + data.days + ' ngày'); if (typeof closeModal === 'function') closeModal('keyModal'); apiGetUser().then(function() { if (typeof renderAll === 'function') renderAll(); }); }
-    else _setKeyError((data && data.error) || 'Key sai!');
-  }).catch(function(e) { _setKeyError(e.message); });
+  if (!key) return _setKeyError('Vui lòng nhập key!');
+
+  var s = getSession();
+  if (!s) return _setKeyError('Vui lòng đăng nhập lại!');
+
+  _setKeyError('Đang xử lý...');
+  api('key_activate', { email: s.email, password: s.password, code: key })
+    .then(function (data) {
+      if (data && data.success) {
+        alert('KÍCH HOẠT THÀNH CÔNG! +' + data.days + ' ngày');
+        if (typeof closeModal === 'function') closeModal('keyModal');
+        apiGetUser().then(function () {
+          if (typeof renderAll === 'function') renderAll();
+        });
+      } else {
+        _setKeyError((data && data.error) || 'Key không hợp lệ!');
+      }
+    })
+    .catch(function (e) {
+      _setKeyError((e && e.message) || 'Lỗi kết nối!');
+    });
 }
 
+/* ---------- SUBMIT DEPOSIT ---------- */
 function submitDeposit() {
-  var amount = Number(_$('depAmount') ? _$('depAmount').value : 0);
-  var note = _$('depNote') ? _$('depNote').value.trim() : '';
-  if (!amount || amount < 10000) return alert('Tối thiểu 10,000đ');
-  var s = getSession(); if (!s) return alert('Đăng nhập lại!');
-  api('deposit_create', { email: s.email, password: s.password, amount: amount, note: note }).then(function(data) {
-    if (data && data.success) { alert(data.message || 'Đã gửi!'); if (typeof closeModal === 'function') closeModal('depositModal'); if (typeof renderAll === 'function') renderAll(); }
-    else alert((data && data.error) || 'Lỗi!');
-  }).catch(function(e) { alert(e.message); });
+  var amtEl  = _$('depAmount');
+  var noteEl = _$('depNote');
+  var amount = Number(amtEl ? amtEl.value : 0);
+  var note   = noteEl ? noteEl.value.trim() : '';
+
+  if (!amount || amount < 10000) return alert('Số tiền tối thiểu 10,000đ');
+  var s = getSession();
+  if (!s) return alert('Vui lòng đăng nhập lại!');
+
+  api('deposit_create', {
+    email: s.email, password: s.password,
+    amount: amount, note: note
+  }).then(function (data) {
+    if (data && data.success) {
+      alert(data.message || 'Đã gửi yêu cầu nạp!');
+      if (typeof closeModal === 'function') closeModal('depositModal');
+      if (typeof renderAll === 'function') renderAll();
+    } else {
+      alert((data && data.error) || 'Lỗi!');
+    }
+  }).catch(function (e) {
+    alert((e && e.message) || 'Lỗi kết nối!');
+  });
 }
 
-window.getIP = getIP;
-window.switchTab = switchTab;
-window.doRegister = doRegister;
-window.doLogin = doLogin;
-window.doLogout = doLogout;
-window.activateKey = activateKey;
-window.submitDeposit = submitDeposit;
+/* ---------- EXPORTS ---------- */
+window.getIP          = getIP;
+window.switchTab      = switchTab;
+window.doRegister     = doRegister;
+window.doLogin        = doLogin;
+window.doLogout       = doLogout;
+window.activateKey    = activateKey;
+window.submitDeposit  = submitDeposit;
