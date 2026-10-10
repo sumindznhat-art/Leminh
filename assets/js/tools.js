@@ -1,49 +1,86 @@
 /* ============================================================
-   TOOLS.JS — MỞ GAME + ROBOT AI 3 TẦNG
+   TOOL MINHIOS — tools.js (REBUILD)
+   Khớp với HTML thực tế: #robot, #phien-text, #prediction-text,
+   #confidence-text, #gameFrame, #gsStatus, #gsStatusText
    ============================================================ */
-
 var activeTool = null, toolInterval = null;
 var _engine = null, _lastSid = null, _lastGy = null, _im = false;
-var _prevSid = null;
 
+/* ---------- STATUS ---------- */
 function setStatus(state, text) {
-  var el = document.getElementById('gsStatus'), txt = document.getElementById('gsStatusText');
+  var el = document.getElementById('gsStatus');
+  var txt = document.getElementById('gsStatusText');
   if (!el || !txt) return;
-  el.classList.remove('err','wait');
+  el.classList.remove('err', 'wait');
   if (state === 'err') el.classList.add('err');
   else if (state === 'wait') el.classList.add('wait');
   txt.textContent = text;
 }
 
-/* ============ MỞ TOOL ============ */
+/* ---------- ROBOT DISPLAY ---------- */
+function updateRobot(sid, prediction, confidence) {
+  var pEl    = document.getElementById('phien-text');
+  var predEl = document.getElementById('prediction-text');
+  var confEl = document.getElementById('confidence-text');
+
+  if (pEl) {
+    pEl.textContent = '#' + (sid != null && sid > 0 ? sid : '0') + ':';
+  }
+  if (predEl) {
+    if (prediction === 'TAI') {
+      predEl.textContent = 'TÀI';
+      predEl.style.color = '#ff3d71';
+      predEl.style.textShadow = '0 0 30px rgba(255,61,113,.95)';
+    } else if (prediction === 'XIU') {
+      predEl.textContent = 'XỈU';
+      predEl.style.color = '#8b5cf6';
+      predEl.style.textShadow = '0 0 30px rgba(139,92,246,.95)';
+    } else {
+      predEl.textContent = '--';
+      predEl.style.color = '#fff';
+      predEl.style.textShadow = '0 2px 24px rgba(0,0,0,.95)';
+    }
+  }
+  if (confEl) {
+    confEl.textContent = 'Tỉ lệ: ' + (confidence != null ? confidence : '--') + '%';
+  }
+}
+
+function resetRobot() { updateRobot(null, null, null); }
+
+/* ---------- OPEN / CLOSE TOOL ---------- */
 function openTool(slugOrId) {
-  var ports = window.CONFIG.ports || [];
-  var tool = ports.filter(function(x) { return x.slug === slugOrId || x.name === slugOrId; })[0];
-  if (!tool) return alert('Tool không tồn tại!');
-  if (!tool.enabled) return alert('🚫 Tool đã tắt!');
-  if (tool.maintenance) return alert('🚧 Tool đang bảo trì!');
+  var ports = (window.CONFIG && window.CONFIG.ports) || [];
+  var tool = ports.filter(function(x) {
+    return x.slug === slugOrId || x.name === slugOrId;
+  })[0];
+  if (!tool)                  return alert('Tool không tồn tại!');
+  if (!tool.enabled)          return alert('Tool đã tắt!');
+  if (tool.maintenance)       return alert('Tool đang bảo trì!');
 
   var s = getSession();
   if (!s) return alert('Vui lòng đăng nhập!');
-  var u = s.user;
+  var u = s.user || {};
   var isAdmin = (u.email === ADMIN_EMAIL) || (u.is_admin == 1);
-  var isVIP = isAdmin || (tool.vip == 0) || (Number(u.key_expiry) > Date.now());
-
+  var isVIP   = isAdmin || (tool.vip == 0) || (Number(u.key_expiry) > Date.now());
   if (!isVIP) {
-    var goBuy = confirm('🔒 CẦN KÍCH HOẠT VIP\n\n💰 Số dư: ' + fmt(u.balance) + '\n\nBấm OK để mua VIP');
-    if (goBuy) showPage('vip'); else openKeyModal();
+    var goBuy = confirm('CẦN KÍCH HOẠT VIP\n\nSố dư: ' + fmt(u.balance || 0));
+    if (goBuy) showPage('vip');
+    else openKeyModal();
     return;
   }
 
   activeTool = tool;
   _engine = new TEEngine.Yq();
   _lastSid = null;
-  _lastGy = null;
-  _im = false;
-  _prevSid = null;
+  _lastGy  = null;
+  _im      = false;
 
-  document.getElementById('gsName').textContent = tool.name;
-  document.getElementById('gsLogo').src = getToolImage(tool) || '';
+  var gsName = document.getElementById('gsName');
+  if (gsName) gsName.textContent = tool.name;
+  var gsLogo = document.getElementById('gsLogo');
+  if (gsLogo) gsLogo.src = getToolImage(tool) || '';
+
   setStatus('wait', 'Đang kết nối');
 
   var frame = document.getElementById('gameFrame');
@@ -53,29 +90,15 @@ function openTool(slugOrId) {
     if (frame) { frame.style.display = 'block'; frame.src = tool.game_url; }
   }
 
-  document.getElementById('game-screen').classList.add('show');
-
-  /* Reset robot */
-  var robot = document.getElementById('robot');
-  if (robot) {
-    robot.style.left = '20px';
-    robot.style.top = 'auto';
-    robot.style.right = 'auto';
-    robot.style.bottom = '30px';
-  }
-
-  var pt = document.getElementById('phien-text');
-  var pr = document.getElementById('prediction-text');
-  var cf = document.getElementById('confidence-text');
-  if (pt) pt.textContent = '#0:';
-  if (pr) { pr.textContent = '--'; pr.style.color = '#8b93a7'; }
-  if (cf) cf.textContent = 'Tỉ lệ: --%';
+  var screen = document.getElementById('game-screen');
+  if (screen) screen.classList.add('show');
 
   if (tool.api_url && typeof apiUpdateLastApi === 'function') {
-    apiUpdateLastApi(tool.api_url, tool.name).catch(function(){});
+    apiUpdateLastApi(tool.api_url, tool.name).catch(function () {});
   }
 
   if (toolInterval) { clearInterval(toolInterval); toolInterval = null; }
+  resetRobot();
 
   if (tool.api_url) {
     tickApi();
@@ -86,159 +109,159 @@ function openTool(slugOrId) {
 }
 
 function closeGame() {
-  var gs = document.getElementById('game-screen');
-  if (gs) gs.classList.remove('show');
+  var screen = document.getElementById('game-screen');
+  if (screen) screen.classList.remove('show');
   var frame = document.getElementById('gameFrame');
   if (frame) { frame.src = 'about:blank'; frame.style.display = 'block'; }
   if (toolInterval) { clearInterval(toolInterval); toolInterval = null; }
   activeTool = null;
 }
 
-/* ============ KÉO THẢ ROBOT ============ */
-(function() {
-  function initDrag() {
-    var robot = document.getElementById('robot');
-    if (!robot) return;
-
-    var drag = false, sx = 0, sy = 0, ox = 0, oy = 0;
-
-    function gp(e) {
-      if (e.touches && e.touches[0]) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
-      return { x: e.clientX, y: e.clientY };
-    }
-
-    function down(e) {
-      var p = gp(e);
-      var r = robot.getBoundingClientRect();
-      drag = true;
-      sx = p.x; sy = p.y;
-      ox = r.left; oy = r.top;
-      robot.style.left = ox + 'px';
-      robot.style.top = oy + 'px';
-      robot.style.right = 'auto';
-      robot.style.bottom = 'auto';
-      robot.style.cursor = 'grabbing';
-      e.preventDefault();
-    }
-
-    function move(e) {
-      if (!drag) return;
-      var p = gp(e);
-      robot.style.left = (ox + p.x - sx) + 'px';
-      robot.style.top = (oy + p.y - sy) + 'px';
-      e.preventDefault();
-    }
-
-    function up() {
-      if (!drag) return;
-      drag = false;
-      robot.style.cursor = 'grab';
-    }
-
-    robot.addEventListener('mousedown', down);
-    robot.addEventListener('touchstart', down, { passive: false });
-    document.addEventListener('mousemove', move);
-    document.addEventListener('touchmove', move, { passive: false });
-    document.addEventListener('mouseup', up);
-    document.addEventListener('touchend', up);
+/* ---------- FETCH + EXTRACT LIST (hỗ trợ nhiều format API) ---------- */
+function extractList(data) {
+  if (!data) return null;
+  if (Array.isArray(data)) return data;
+  var cands = [data.list, data.sessions, data.history, data.items,
+               data.soicau, data.results, data.result, data.data];
+  for (var i = 0; i < cands.length; i++) {
+    var v = cands[i];
+    if (Array.isArray(v) && v.length) return v;
   }
-
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initDrag);
-  else initDrag();
-})();
-
-/* ============ UPDATE ROBOT ============ */
-function updateRobot(nid, pred, conf) {
-  var pt = document.getElementById('phien-text');
-  var pr = document.getElementById('prediction-text');
-  var cf = document.getElementById('confidence-text');
-
-  if (pt && nid != null) pt.textContent = '#' + nid + ':';
-
-  if (pr) {
-    if (pred) {
-      pr.textContent = pred;
-      pr.style.color = pred === 'TAI' ? '#00ff88' : '#ff4444';
-      pr.style.transform = 'scale(1.1)';
-      setTimeout(function() { pr.style.transform = 'scale(1)'; }, 150);
-    } else {
-      pr.textContent = '--';
-      pr.style.color = '#8b93a7';
+  if (data.data && typeof data.data === 'object' && !Array.isArray(data.data)) {
+    for (var k in data.data) {
+      if (Array.isArray(data.data[k]) && data.data[k].length) return data.data[k];
     }
   }
-
-  if (cf) {
-    if (conf != null) {
-      cf.textContent = 'Tỉ lệ: ' + conf + '%';
-      /* Màu theo tầng */
-      if (conf >= 80) cf.style.color = '#ffd700';
-      else if (conf >= 60) cf.style.color = '#22c55e';
-      else cf.style.color = '#94a3b8';
-    } else {
-      cf.textContent = 'Tỉ lệ: --%';
-      cf.style.color = '#ffd700';
-    }
-  }
+  return null;
 }
 
-/* ============ API TICK ============ */
+/* ---------- TICK ---------- */
 function tickApi() {
   if (!activeTool || !activeTool.api_url) return;
 
   fetch(activeTool.api_url, { cache: 'no-store' })
-    .then(function(r) { if (!r.ok) throw 0; return r.json(); })
-    .then(function(data) {
-      var list = data.list || data.data || data.sessions || data.result || data.history || data.items || data.soicau;
-      if (!Array.isArray(list) && data.data && typeof data.data === 'object') {
-        var first = Object.values(data.data).find(function(v) { return Array.isArray(v); });
-        if (first) list = first;
-      }
+    .then(function (r) { if (!r.ok) throw 0; return r.json(); })
+    .then(function (data) {
+      var list = extractList(data);
       if (!Array.isArray(list) || !list.length) throw 0;
 
-      var asc = list.slice().sort(function(a, b) { return (a.id || 0) - (b.id || 0); });
-      var nid = list[0].id || asc[asc.length-1].id || Date.now();
+      // Sort tăng dần theo id, lấy phần tử mới nhất
+      var asc = list.slice().sort(function (a, b) {
+        return (Number(a.id) || 0) - (Number(b.id) || 0);
+      });
+      var latest = asc[asc.length - 1];
+      var nid = Number(latest.id);
+      if (!isFinite(nid) || nid <= 0) nid = Date.now();
 
       setStatus('ok', 'OK');
+      var displaySid = nid + 1;
 
-      if (_prevSid === null) {
-        _prevSid = nid;
-        _lastSid = nid;
-        analyze(asc, nid);
-        return;
-      }
-
-      if (nid !== _prevSid) {
+      // Phát hiện ván mới
+      if (_lastSid !== null && nid !== _lastSid) {
         _im = true;
-        updateRobot(nid + 1, null, null);
-        setTimeout(function() {
+        updateRobot(displaySid, null, null);
+        setTimeout(function () {
           _im = false;
-          _prevSid = nid;
-          _lastSid = nid;
-          analyze(asc, nid);
-        }, 4000);
+          analyze(asc, displaySid);
+        }, 5000);
+        _lastSid = nid;
         return;
       }
-
-      if (!_im) analyze(asc, nid);
+      _lastSid = nid;
+      if (!_im) analyze(asc, displaySid);
     })
-    .catch(function() {
-      setStatus('err', 'Lỗi');
+    .catch(function () {
+      setStatus('err', 'Lỗi kết nối');
     });
 }
 
-function analyze(asc, nid) {
+/* ---------- ANALYZE ---------- */
+function analyze(asc, displaySid) {
   try {
     _engine.load(asc);
     var qs = TEEngine.predict(_engine);
-    _lastGy = qs.g;
-    _lastSid = nid;
-    updateRobot(nid + 1, qs.g, qs.conf);
-    setStatus('ok', 'Sẵn sàng');
+    if (qs && qs.g) {
+      updateRobot(displaySid, qs.g, qs.conf);
+      setStatus('ok', 'Sẵn sàng ' + qs.conf + '%');
+      _lastGy = qs.g;
+    } else {
+      updateRobot(displaySid, null, null);
+      setStatus('ok', 'Chờ dữ liệu...');
+      _lastGy = null;
+    }
   } catch (e) {
-    console.error('Analyze error', e);
+    console.error('[analyze]', e);
   }
 }
 
-window.openTool = openTool;
+/* ---------- DRAG ROBOT (với lưu vị trí) ---------- */
+(function () {
+  function init() {
+    var el = document.getElementById('robot');
+    if (!el) return;
+
+    // Phục hồi vị trí đã lưu
+    try {
+      var saved = localStorage.getItem('minhios_robot_pos');
+      if (saved) {
+        var pos = JSON.parse(saved);
+        if (pos && pos.left) {
+          el.style.left = pos.left;
+          el.style.top  = pos.top;
+          el.style.bottom = 'auto';
+          el.style.right  = 'auto';
+        }
+      }
+    } catch (_) {}
+
+    var dragging = false, moved = false;
+    var startX = 0, startY = 0, origX = 0, origY = 0;
+
+    el.addEventListener('pointerdown', function (e) {
+      // Bỏ qua click trên text
+      if (e.target.closest('#box-content')) return;
+      dragging = true;
+      moved = false;
+      startX = e.clientX;
+      startY = e.clientY;
+      var rect = el.getBoundingClientRect();
+      origX = rect.left;
+      origY = rect.top;
+      try { el.setPointerCapture(e.pointerId); } catch (_) {}
+    });
+
+    el.addEventListener('pointermove', function (e) {
+      if (!dragging) return;
+      var dx = e.clientX - startX;
+      var dy = e.clientY - startY;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) moved = true;
+      el.style.left   = (origX + dx) + 'px';
+      el.style.top    = (origY + dy) + 'px';
+      el.style.bottom = 'auto';
+      el.style.right  = 'auto';
+    });
+
+    function stop() {
+      if (dragging && moved) {
+        try {
+          localStorage.setItem('minhios_robot_pos',
+            JSON.stringify({ left: el.style.left, top: el.style.top }));
+        } catch (_) {}
+      }
+      dragging = false;
+    }
+    el.addEventListener('pointerup', stop);
+    el.addEventListener('pointercancel', stop);
+    el.addEventListener('pointerleave', stop);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+
+/* ---------- EXPORTS ---------- */
+window.openTool  = openTool;
 window.closeGame = closeGame;
-window.updateRobot = updateRobot;
