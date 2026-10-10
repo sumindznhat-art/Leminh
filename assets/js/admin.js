@@ -1,5 +1,5 @@
 /* ============================================================
-   ADMIN.JS — QUẢN TRỊ + UPLOAD ẢNH BASE64 + CẤU HÌNH FULL
+   ADMIN.JS — QUẢN TRỊ + UPLOAD ẢNH BASE64
    ============================================================ */
 
 async function openAdmin() {
@@ -129,211 +129,77 @@ function adminDeleteUser(email) {
   api('user_delete', { email: s.email, password: s.password, target_email: email }).then(function(res) { if (res && res.success) { alert('Đã xoá'); renderAdminUsers(); } });
 }
 
-/* ============ TOOLS + CẤU HÌNH FULL ============ */
+/* ============ TOOLS + CẤU HÌNH ẢNH ============ */
 function renderAdminTools() {
   var el = document.getElementById('adminToolsView'); if (!el) return;
-  var cfg = window.CONFIG || {};
-  var bank = cfg.bank || {};
-  var logo = cfg.logo || '';
-  var avatar = cfg.avatar || '';
-  var bg = cfg.background || '';
-  var banner = cfg.banner || '';
+  var bank = window.CONFIG.bank || {};
+  var logo = window.CONFIG.logo || '';
+  var avatar = window.CONFIG.avatar || '';
 
-  var html = '';
+  var html = '<div class="adm-section" style="border-color:#93c5fd">';
+  html += '<h4>⚙️ CẤU HÌNH</h4>';
+  html += '<label style="font-size:11px;font-weight:700">Tên Site</label><input class="adm-input" id="cfgSiteName" value="' + esc(window.CONFIG.site_name||'') + '">';
+  html += '<label style="font-size:11px;font-weight:700">Mô tả</label><input class="adm-input" id="cfgSiteDesc" value="' + esc(window.CONFIG.site_desc||'') + '">';
+  html += '<label style="font-size:11px;font-weight:700">Chữ chạy</label><input class="adm-input" id="cfgMarquee" value="' + esc(window.CONFIG.marquee||'') + '">';
+  html += '<label style="font-size:11px;font-weight:700">🎵 URL nhạc nền</label><input class="adm-input" id="cfgMusicUrl" value="' + esc(window.CONFIG.music_url||'') + '" placeholder="https://.../music.mp3">';
 
-  /* ===== 1. THÔNG TIN WEBSITE ===== */
-  html += '<div class="adm-section" style="border-color:#60a5fa">';
-  html += '<h4>🌐 THÔNG TIN WEBSITE</h4>';
-  html += '<label style="font-size:11px;font-weight:700">Tên Site</label><input class="adm-input" id="cfgSiteName" value="' + esc(cfg.site_name||'') + '" placeholder="TOOL MINHIOS">';
-  html += '<label style="font-size:11px;font-weight:700">Mô tả / Slogan</label><input class="adm-input" id="cfgSiteDesc" value="' + esc(cfg.site_desc||'') + '" placeholder="Tool hỗ trợ miễn phí">';
-  html += '<label style="font-size:11px;font-weight:700">Tiêu đề tab (title)</label><input class="adm-input" id="cfgPageTitle" value="' + esc(cfg.page_title||'') + '" placeholder="TOOL MINHIOS">';
-  html += '<label style="font-size:11px;font-weight:700">Từ khoá SEO (keywords)</label><input class="adm-input" id="cfgKeywords" value="' + esc(cfg.keywords||'') + '" placeholder="tool, free, vip">';
-  html += '<label style="font-size:11px;font-weight:700">Chữ chạy (marquee)</label><input class="adm-input" id="cfgMarquee" value="' + esc(cfg.marquee||'') + '" placeholder="🔥 Chào mừng bạn đến với tool!">';
-  html += '<label style="font-size:11px;font-weight:700">🎵 URL nhạc nền</label><input class="adm-input" id="cfgMusicUrl" value="' + esc(cfg.music_url||'') + '" placeholder="https://.../music.mp3">';
-  html += '</div>';
-
-  /* ===== 2. NỘI DUNG HIỂN THỊ ===== */
-  html += '<div class="adm-section" style="border-color:#a78bfa">';
-  html += '<h4>📝 NỘI DUNG HIỂN THỊ</h4>';
-  html += '<label style="font-size:11px;font-weight:700">Tiêu đề trang đăng nhập</label><input class="adm-input" id="cfgLoginTitle" value="' + esc(cfg.login_title||'') + '" placeholder="ĐĂNG NHẬP">';
-  html += '<label style="font-size:11px;font-weight:700">Nội dung chào mừng (home)</label><textarea class="adm-input" id="cfgHomeWelcome" rows="2" style="resize:vertical" placeholder="Chào mừng bạn đến với tool!">' + esc(cfg.home_welcome||'') + '</textarea>';
-  html += '<label style="font-size:11px;font-weight:700">Thông báo (hiện popup/đầu trang)</label><textarea class="adm-input" id="cfgAnnounce" rows="2" style="resize:vertical" placeholder="Nhập thông báo...">' + esc(cfg.announce||'') + '</textarea>';
-  html += '<label style="font-size:11px;font-weight:700">Footer (chân trang)</label><input class="adm-input" id="cfgFooter" value="' + esc(cfg.footer||'') + '" placeholder="© 2025 TOOL MINHIOS">';
-  html += '<label style="font-size:11px;font-weight:700">📞 Liên hệ (SĐT/Zalo/Tele)</label><input class="adm-input" id="cfgContact" value="' + esc(cfg.contact||'') + '" placeholder="Zalo: 0123456789">';
-  html += '<label style="font-size:11px;font-weight:700">📘 Facebook/Group</label><input class="adm-input" id="cfgFacebook" value="' + esc(cfg.facebook||'') + '" placeholder="https://facebook.com/...">';
-  html += '<label style="font-size:11px;font-weight:700">💬 Telegram</label><input class="adm-input" id="cfgTelegram" value="' + esc(cfg.telegram||'') + '" placeholder="https://t.me/...">';
-  html += '<label style="font-size:11px;font-weight:700">📺 YouTube</label><input class="adm-input" id="cfgYoutube" value="' + esc(cfg.youtube||'') + '" placeholder="https://youtube.com/...">';
-  html += '<label style="font-size:11px;font-weight:700">📱 TikTok</label><input class="adm-input" id="cfgTiktok" value="' + esc(cfg.tiktok||'') + '" placeholder="https://tiktok.com/@...">';
-  html += '</div>';
-
-  /* ===== 3. LOGO ===== */
-  html += '<div class="adm-section" style="border-color:#22c55e">';
-  html += '<h4>🖼️ LOGO WEBSITE</h4>';
+  /* LOGO */
+  html += '<div style="background:#0a0b0f;border-radius:10px;padding:10px;margin-top:10px;border:1px solid #2e3342">';
+  html += '<div style="font-size:12px;font-weight:800;color:#60a5fa;margin-bottom:8px">🖼️ LOGO</div>';
   html += '<input type="file" id="cfgLogoFile" accept="image/*" class="adm-input" style="padding:5px;font-size:11px">';
-  if (logo) html += '<div style="text-align:center;margin-top:8px;background:#0a0b0f;border-radius:10px;padding:10px"><img src="' + logo + '" style="max-width:100px;max-height:100px;border-radius:8px"><br><button class="b5" style="margin-top:6px;font-size:11px" onclick="clearCfgImage(\'logo\')">Xoá logo</button></div>';
+  if (logo) html += '<div style="text-align:center;margin-top:6px"><img src="' + logo + '" style="max-width:80px;border-radius:50%"></div>';
   html += '</div>';
 
-  /* ===== 4. AVATAR ===== */
-  html += '<div class="adm-section" style="border-color:#22c55e">';
-  html += '<h4>👤 AVATAR MẶC ĐỊNH</h4>';
+  /* AVATAR */
+  html += '<div style="background:#0a0b0f;border-radius:10px;padding:10px;margin-top:10px;border:1px solid #2e3342">';
+  html += '<div style="font-size:12px;font-weight:800;color:#60a5fa;margin-bottom:8px">👤 AVATAR MẶC ĐỊNH</div>';
   html += '<input type="file" id="cfgAvatarFile" accept="image/*" class="adm-input" style="padding:5px;font-size:11px">';
-  if (avatar) html += '<div style="text-align:center;margin-top:8px;background:#0a0b0f;border-radius:10px;padding:10px"><img src="' + avatar + '" style="max-width:100px;max-height:100px;border-radius:50%"><br><button class="b5" style="margin-top:6px;font-size:11px" onclick="clearCfgImage(\'avatar\')">Xoá avatar</button></div>';
+  if (avatar) html += '<div style="text-align:center;margin-top:6px"><img src="' + avatar + '" style="max-width:80px;border-radius:50%"></div>';
   html += '</div>';
 
-  /* ===== 5. BANNER ===== */
-  html += '<div class="adm-section" style="border-color:#f59e0b">';
-  html += '<h4>🎨 ẢNH BANNER</h4>';
-  html += '<input type="file" id="cfgBannerFile" accept="image/*" class="adm-input" style="padding:5px;font-size:11px">';
-  if (banner) html += '<div style="text-align:center;margin-top:8px;background:#0a0b0f;border-radius:10px;padding:10px"><img src="' + banner + '" style="max-width:100%;max-height:120px;border-radius:8px"><br><button class="b5" style="margin-top:6px;font-size:11px" onclick="clearCfgImage(\'banner\')">Xoá banner</button></div>';
-  html += '</div>';
-
-  /* ===== 6. BACKGROUND ===== */
-  html += '<div class="adm-section" style="border-color:#f59e0b">';
-  html += '<h4>🌈 ẢNH NỀN</h4>';
-  html += '<input type="file" id="cfgBgFile" accept="image/*" class="adm-input" style="padding:5px;font-size:11px">';
-  if (bg) html += '<div style="text-align:center;margin-top:8px;background:#0a0b0f;border-radius:10px;padding:10px"><img src="' + bg + '" style="max-width:100%;max-height:120px;border-radius:8px"><br><button class="b5" style="margin-top:6px;font-size:11px" onclick="clearCfgImage(\'background\')">Xoá nền</button></div>';
-  html += '</div>';
-
-  /* ===== 7. BANK + QR ===== */
-  html += '<div class="adm-section" style="border-color:#3b82f6">';
-  html += '<h4>🏦 BANK + QR NẠP TIỀN</h4>';
-  html += '<label style="font-size:11px;font-weight:700">Tên NH</label><input class="adm-input" id="cfgBankName" value="' + esc(bank.name||'') + '" placeholder="MB Bank">';
-  html += '<label style="font-size:11px;font-weight:700">STK</label><input class="adm-input" id="cfgBankAcc" value="' + esc(bank.account||'') + '" placeholder="0123456789">';
-  html += '<label style="font-size:11px;font-weight:700">Chủ TK</label><input class="adm-input" id="cfgBankOwner" value="' + esc(bank.owner||'') + '" placeholder="NGUYEN VAN A">';
-  html += '<label style="font-size:11px;font-weight:700">Nội dung CK mẫu</label><input class="adm-input" id="cfgBankNote" value="' + esc(bank.note||'') + '" placeholder="NAP [email]">';
+  /* BANK + QR */
+  html += '<div style="background:#0a0b0f;border-radius:10px;padding:10px;margin-top:10px;border:1px solid #2e3342">';
+  html += '<div style="font-size:12px;font-weight:800;color:#60a5fa;margin-bottom:8px">🏦 BANK + QR</div>';
+  html += '<label style="font-size:11px;font-weight:700">Tên NH</label><input class="adm-input" id="cfgBankName" value="' + esc(bank.name||'') + '">';
+  html += '<label style="font-size:11px;font-weight:700">STK</label><input class="adm-input" id="cfgBankAcc" value="' + esc(bank.account||'') + '">';
+  html += '<label style="font-size:11px;font-weight:700">Chủ TK</label><input class="adm-input" id="cfgBankOwner" value="' + esc(bank.owner||'') + '">';
   html += '<label style="font-size:11px;font-weight:700">Ảnh QR</label><input type="file" id="cfgQRFile" accept="image/*" class="adm-input" style="padding:5px;font-size:11px">';
-  if (bank.qr) html += '<div style="text-align:center;margin-top:8px;background:#0a0b0f;border-radius:10px;padding:10px"><img src="' + bank.qr + '" style="max-width:140px;border-radius:8px"><br><button class="b5" style="margin-top:6px;font-size:11px" onclick="clearCfgImage(\'qr\')">Xoá QR</button></div>';
+  if (bank.qr) html += '<div style="text-align:center;margin-top:6px"><img src="' + bank.qr + '" style="max-width:100px;border-radius:8px"></div>';
   html += '</div>';
 
-  /* ===== 8. TUỲ CHỈNH NÂNG CAO ===== */
-  html += '<div class="adm-section" style="border-color:#ef4444">';
-  html += '<h4>⚡ TUỲ CHỈNH NÂNG CAO</h4>';
-  html += '<label style="font-size:11px;font-weight:700">Màu chủ đạo (hex)</label><input class="adm-input" id="cfgPrimaryColor" value="' + esc(cfg.primary_color||'#3b82f6') + '" placeholder="#3b82f6">';
-  html += '<label style="font-size:11px;font-weight:700">Màu nền (hex)</label><input class="adm-input" id="cfgBgColor" value="' + esc(cfg.bg_color||'#0a0b0f') + '" placeholder="#0a0b0f">';
-  html += '<label style="font-size:11px;font-weight:700">Thông báo bảo trì (để trống = tắt)</label><textarea class="adm-input" id="cfgMaintenance" rows="2" style="resize:vertical" placeholder="Tool đang bảo trì...">' + esc(cfg.maintenance||'') + '</textarea>';
-  html += '<label style="font-size:11px;font-weight:700">Số dư tối thiểu nạp</label><input class="adm-input" id="cfgMinDeposit" type="number" value="' + (cfg.min_deposit||10000) + '">';
-  html += '<label style="font-size:11px;font-weight:700">Tỉ lệ quy đổi (VNĐ → điểm)</label><input class="adm-input" id="cfgRate" type="number" value="' + (cfg.rate||1) + '" placeholder="1">';
+  html += '<button class="adm-btn" style="background:linear-gradient(135deg,#22c55e,#16a34a);margin-top:12px" onclick="saveSiteConfig()">💾 LƯU CẤU HÌNH</button>';
   html += '</div>';
-
-  /* ===== NÚT LƯU ===== */
-  html += '<button class="adm-btn" style="background:linear-gradient(135deg,#22c55e,#16a34a);margin-top:12px;font-size:14px;padding:14px" onclick="saveSiteConfig()">💾 LƯU TẤT CẢ CẤU HÌNH</button>';
-  html += '<button class="adm-btn" style="background:linear-gradient(135deg,#ef4444,#b91c1c);margin-top:8px;font-size:12px" onclick="resetSiteConfig()">🔄 RESET CẤU HÌNH</button>';
 
   el.innerHTML = html;
 }
 
-/* Xoá ảnh trong config */
-function clearCfgImage(key) {
-  if (!confirm('Xoá ảnh này?')) return;
-  if (key === 'qr') { if (window.CONFIG.bank) window.CONFIG.bank.qr = ''; }
-  else window.CONFIG[key] = '';
-  saveSiteConfig();
-}
-
-/* Reset toàn bộ config */
-function resetSiteConfig() {
-  if (!confirm('RESET toàn bộ cấu hình về mặc định?')) return;
-  if (!confirm('Chắc chắn? Hành động không thể hoàn tác!')) return;
-  window.CONFIG = {
-    site_name: 'TOOL MINHIOS',
-    site_desc: '',
-    page_title: 'TOOL MINHIOS',
-    keywords: '',
-    marquee: '',
-    music_url: '',
-    login_title: 'ĐĂNG NHẬP',
-    home_welcome: '',
-    announce: '',
-    footer: '',
-    contact: '',
-    facebook: '',
-    telegram: '',
-    youtube: '',
-    tiktok: '',
-    logo: '',
-    avatar: '',
-    banner: '',
-    background: '',
-    bank: { name: '', account: '', owner: '', note: '', qr: '' },
-    primary_color: '#3b82f6',
-    bg_color: '#0a0b0f',
-    maintenance: '',
-    min_deposit: 10000,
-    rate: 1
-  };
-  var s = getSession();
-  api('config_save', { email: s.email, password: s.password, config: window.CONFIG }).then(function(res) {
-    if (res && res.success) { alert('✅ ĐÃ RESET!'); location.reload(); }
-  });
-}
-
-/* ============ LƯU CẤU HÌNH ============ */
 function saveSiteConfig() {
   function val(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; }
-  function num(id, def) { var v = Number(val(id)); return isNaN(v) ? def : v; }
-
-  /* Thông tin website */
   window.CONFIG.site_name = val('cfgSiteName') || 'TOOL MINHIOS';
   window.CONFIG.site_desc = val('cfgSiteDesc');
-  window.CONFIG.page_title = val('cfgPageTitle') || window.CONFIG.site_name;
-  window.CONFIG.keywords = val('cfgKeywords');
   window.CONFIG.marquee = val('cfgMarquee');
   window.CONFIG.music_url = val('cfgMusicUrl');
-
-  /* Nội dung */
-  window.CONFIG.login_title = val('cfgLoginTitle') || 'ĐĂNG NHẬP';
-  window.CONFIG.home_welcome = val('cfgHomeWelcome');
-  window.CONFIG.announce = val('cfgAnnounce');
-  window.CONFIG.footer = val('cfgFooter');
-  window.CONFIG.contact = val('cfgContact');
-  window.CONFIG.facebook = val('cfgFacebook');
-  window.CONFIG.telegram = val('cfgTelegram');
-  window.CONFIG.youtube = val('cfgYoutube');
-  window.CONFIG.tiktok = val('cfgTiktok');
-
-  /* Bank */
   window.CONFIG.bank = window.CONFIG.bank || {};
   window.CONFIG.bank.name = val('cfgBankName');
   window.CONFIG.bank.account = val('cfgBankAcc');
   window.CONFIG.bank.owner = val('cfgBankOwner');
-  window.CONFIG.bank.note = val('cfgBankNote');
 
-  /* Nâng cao */
-  window.CONFIG.primary_color = val('cfgPrimaryColor') || '#3b82f6';
-  window.CONFIG.bg_color = val('cfgBgColor') || '#0a0b0f';
-  window.CONFIG.maintenance = val('cfgMaintenance');
-  window.CONFIG.min_deposit = num('cfgMinDeposit', 10000);
-  window.CONFIG.rate = num('cfgRate', 1);
-
-  /* Ảnh */
-  var logoFile = document.getElementById('cfgLogoFile') ? document.getElementById('cfgLogoFile').files[0] : null;
-  var avatarFile = document.getElementById('cfgAvatarFile') ? document.getElementById('cfgAvatarFile').files[0] : null;
-  var qrFile = document.getElementById('cfgQRFile') ? document.getElementById('cfgQRFile').files[0] : null;
-  var bannerFile = document.getElementById('cfgBannerFile') ? document.getElementById('cfgBannerFile').files[0] : null;
-  var bgFile = document.getElementById('cfgBgFile') ? document.getElementById('cfgBgFile').files[0] : null;
+  var logoFile = document.getElementById('cfgLogoFile').files[0];
+  var avatarFile = document.getElementById('cfgAvatarFile').files[0];
+  var qrFile = document.getElementById('cfgQRFile').files[0];
 
   var chain = Promise.resolve();
-  if (logoFile) chain = chain.then(function() { return fileToBase64(logoFile, 400, 0.88).then(function(b64) { if (b64) window.CONFIG.logo = b64; }); });
-  if (avatarFile) chain = chain.then(function() { return fileToBase64(avatarFile, 400, 0.88).then(function(b64) { if (b64) window.CONFIG.avatar = b64; }); });
-  if (qrFile) chain = chain.then(function() { return fileToBase64(qrFile, 600, 0.88).then(function(b64) { if (b64) window.CONFIG.bank.qr = b64; }); });
-  if (bannerFile) chain = chain.then(function() { return fileToBase64(bannerFile, 1200, 0.85).then(function(b64) { if (b64) window.CONFIG.banner = b64; }); });
-  if (bgFile) chain = chain.then(function() { return fileToBase64(bgFile, 1200, 0.85).then(function(b64) { if (b64) window.CONFIG.background = b64; }); });
+  if (logoFile) chain = chain.then(function() { return fileToBase64(logoFile, 300, 0.85).then(function(b64) { if (b64) window.CONFIG.logo = b64; }); });
+  if (avatarFile) chain = chain.then(function() { return fileToBase64(avatarFile, 300, 0.85).then(function(b64) { if (b64) window.CONFIG.avatar = b64; }); });
+  if (qrFile) chain = chain.then(function() { return fileToBase64(qrFile, 600, 0.85).then(function(b64) { if (b64) window.CONFIG.bank.qr = b64; }); });
 
   chain.then(function() {
     var s = getSession();
-    if (document.getElementById('cfgLogoFile')) document.getElementById('cfgLogoFile').value = '';
-    if (document.getElementById('cfgAvatarFile')) document.getElementById('cfgAvatarFile').value = '';
-    if (document.getElementById('cfgQRFile')) document.getElementById('cfgQRFile').value = '';
-    if (document.getElementById('cfgBannerFile')) document.getElementById('cfgBannerFile').value = '';
-    if (document.getElementById('cfgBgFile')) document.getElementById('cfgBgFile').value = '';
-
     api('config_save', { email: s.email, password: s.password, config: window.CONFIG }).then(function(res) {
       if (res && res.success) {
         alert('✅ ĐÃ LƯU CẤU HÌNH!');
         if (typeof applyLoginBranding === 'function') applyLoginBranding();
         if (typeof buildBankInfo === 'function') buildBankInfo();
-        if (typeof applySiteConfig === 'function') applySiteConfig();
-        else if (typeof applyConfig === 'function') applyConfig();
         renderAdminTools();
       } else alert('❌ ' + ((res && res.error) || 'Lỗi'));
     });
@@ -387,7 +253,6 @@ function renderAdminHistory() {
   });
 }
 
-/* ============ EXPORT ============ */
 window.openAdmin = openAdmin;
 window.switchAdminTab = switchAdminTab;
 window.approveDeposit = approveDeposit;
@@ -398,8 +263,6 @@ window.adminDeleteUser = adminDeleteUser;
 window.adminGenKeys = adminGenKeys;
 window.adminDelKey = adminDelKey;
 window.saveSiteConfig = saveSiteConfig;
-window.resetSiteConfig = resetSiteConfig;
-window.clearCfgImage = clearCfgImage;
 window.fileToBase64 = fileToBase64;
 window.renderAdminPending = renderAdminPending;
 window.renderAdminUsers = renderAdminUsers;
