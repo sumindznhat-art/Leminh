@@ -1,5 +1,5 @@
 /* ============================================================
-   TOOLS.JS — MỞ GAME + ROBOT AI KÉO THẢ
+   TOOLS.JS — MỞ GAME + ROBOT AI 3 TẦNG
    ============================================================ */
 
 var activeTool = null, toolInterval = null;
@@ -15,6 +15,7 @@ function setStatus(state, text) {
   txt.textContent = text;
 }
 
+/* ============ MỞ TOOL ============ */
 function openTool(slugOrId) {
   var ports = window.CONFIG.ports || [];
   var tool = ports.filter(function(x) { return x.slug === slugOrId || x.name === slugOrId; })[0];
@@ -54,7 +55,7 @@ function openTool(slugOrId) {
 
   document.getElementById('game-screen').classList.add('show');
 
-  /* Reset robot vị trí mặc định */
+  /* Reset robot */
   var robot = document.getElementById('robot');
   if (robot) {
     robot.style.left = '20px';
@@ -63,7 +64,6 @@ function openTool(slugOrId) {
     robot.style.bottom = '30px';
   }
 
-  /* Reset text robot */
   var pt = document.getElementById('phien-text');
   var pr = document.getElementById('prediction-text');
   var cf = document.getElementById('confidence-text');
@@ -152,7 +152,9 @@ function updateRobot(nid, pred, conf) {
   var pt = document.getElementById('phien-text');
   var pr = document.getElementById('prediction-text');
   var cf = document.getElementById('confidence-text');
+
   if (pt && nid != null) pt.textContent = '#' + nid + ':';
+
   if (pr) {
     if (pred) {
       pr.textContent = pred;
@@ -164,7 +166,19 @@ function updateRobot(nid, pred, conf) {
       pr.style.color = '#8b93a7';
     }
   }
-  if (cf) cf.textContent = 'Tỉ lệ: ' + (conf != null ? conf + '%' : '--%');
+
+  if (cf) {
+    if (conf != null) {
+      cf.textContent = 'Tỉ lệ: ' + conf + '%';
+      /* Màu theo tầng */
+      if (conf >= 80) cf.style.color = '#ffd700';
+      else if (conf >= 60) cf.style.color = '#22c55e';
+      else cf.style.color = '#94a3b8';
+    } else {
+      cf.textContent = 'Tỉ lệ: --%';
+      cf.style.color = '#ffd700';
+    }
+  }
 }
 
 /* ============ API TICK ============ */
@@ -192,6 +206,7 @@ function tickApi() {
         analyze(asc, nid);
         return;
       }
+
       if (nid !== _prevSid) {
         _im = true;
         updateRobot(nid + 1, null, null);
@@ -203,6 +218,7 @@ function tickApi() {
         }, 4000);
         return;
       }
+
       if (!_im) analyze(asc, nid);
     })
     .catch(function() {
