@@ -22,12 +22,14 @@ function loadRemoteConfig() {
   }).catch(function(){});
 }
 
-function saveRemoteConfig() { var s = getSession(); if (!s) return Promise.resolve({ success: false }); return api('config_save', { email: s.email, password: s.password, config: window.CONFIG }); }
+function saveRemoteConfig() {
+  var s = getSession(); if (!s) return Promise.resolve({ success: false });
+  return api('config_save', { email: s.email, password: s.password, config: window.CONFIG });
+}
 
 function applyLoginBranding() {
   var t = document.getElementById('loginSiteName'); if (t && window.CONFIG.site_name) t.textContent = window.CONFIG.site_name;
   var s = document.getElementById('subText'); if (s && window.CONFIG.site_desc) s.textContent = window.CONFIG.site_desc;
-  var m = document.getElementById('marqueeText'); if (m && window.CONFIG.marquee) m.textContent = window.CONFIG.marquee;
   if (window.CONFIG.logo) { var lg = document.getElementById('loginAvatarImg'); if (lg) lg.src = window.CONFIG.logo; }
 }
 
@@ -41,7 +43,7 @@ function enterApp() {
     if (!u) { doLogout(); return; }
     var isAdmin = (u.email === ADMIN_EMAIL) || (u.is_admin == 1);
     var float = document.getElementById('adminFloat'), diAdm = document.getElementById('diAdmin');
-    if (float) float.style.display = isAdmin ? 'flex' : 'none';
+    if (float) float.classList.toggle('show', isAdmin);
     if (diAdm) diAdm.style.display = isAdmin ? '' : 'none';
     var av = u.avatar || getAvatarFromStorage() || window.CONFIG.avatar || DEFAULT_AVATAR;
     applyAvatarEverywhere(av);
@@ -74,7 +76,12 @@ function showPage(p) {
   if (p === 'deposit' || p === 'vip' || p === 'profile') renderAll();
 }
 
-function startClock() { setInterval(function() { var d = new Date(); var a = document.getElementById('liveClock'); if (a) a.textContent = d.toLocaleTimeString('vi-VN', { hour12: false }); }, 1000); }
+function startClock() {
+  setInterval(function() {
+    var d = new Date();
+    var a = document.getElementById('liveClock'); if (a) a.textContent = d.toLocaleTimeString('vi-VN', { hour12: false });
+  }, 1000);
+}
 
 function renderAll() {
   var s = getSession(); if (!s || !s.user) return;
@@ -100,7 +107,9 @@ function buildBankInfo() {
 function buildPackages() {
   var el = document.getElementById('pkgList'); if (!el) return;
   var pkgs = window.CONFIG.packages || [];
-  el.innerHTML = pkgs.map(function(p) { return '<div class="action-card" onclick="buyPackage(\'' + p.id + '\')"><div class="ac-icon" style="background:linear-gradient(135deg,#fbbf24,#f59e0b)"><i class="fa-solid fa-crown"></i></div><div class="ac-info"><div class="ac-name">' + esc(p.name) + '</div><div class="ac-desc">' + p.days + ' ngày • <b>' + fmt(p.price) + '</b></div></div><i class="fa-solid fa-chevron-right ac-arrow"></i></div>'; }).join('');
+  el.innerHTML = pkgs.map(function(p) {
+    return '<div class="action-card" onclick="buyPackage(\'' + p.id + '\')"><div class="ac-icon" style="background:linear-gradient(135deg,#fbbf24,#f59e0b)"><i class="fa-solid fa-crown"></i></div><div class="ac-info"><div class="ac-name">' + esc(p.name) + '</div><div class="ac-desc">' + p.days + ' ngày • <b>' + fmt(p.price) + '</b></div></div><i class="fa-solid fa-chevron-right ac-arrow"></i></div>';
+  }).join('');
 }
 
 function buyPackage(id) {
@@ -115,13 +124,16 @@ function buyPackage(id) {
 
 function buildCatTabs() {
   var els = [document.getElementById('catTabs'), document.getElementById('catTabs2')];
-  var ports = window.CONFIG.ports || [];
   var tabs = [{ key: 'all', label: 'TẤT CẢ' }, { key: 'taixiu', label: 'TÀI XỈU' }, { key: 'sicbo', label: 'SICBO' }, { key: 'baccarat', label: 'BACCARAT' }];
   var html = tabs.map(function(t) { return '<button class="cat-tab ' + (t.key === _currentCat ? 'active' : '') + '" data-cat="' + t.key + '" onclick="switchCat(\'' + t.key + '\')">' + t.label + '</button>'; }).join('');
   els.forEach(function(el) { if (el) el.innerHTML = html; });
 }
 
-function switchCat(cat) { _currentCat = cat; document.querySelectorAll('.cat-tab').forEach(function(x) { x.classList.toggle('active', x.dataset.cat === cat); }); buildPorts(); }
+function switchCat(cat) {
+  _currentCat = cat;
+  document.querySelectorAll('.cat-tab').forEach(function(x) { x.classList.toggle('active', x.dataset.cat === cat); });
+  buildPorts();
+}
 
 function buildPorts() {
   var ports = window.CONFIG.ports || [];
@@ -161,7 +173,10 @@ function openHistoryDeposit() {
     var hist = (res && res.success) ? (res.history || []) : [];
     var deps = hist.filter(function(h) { return h.type === 'deposit' || h.type === 'auto-buy'; });
     var html = deps.length ? '' : '<p style="text-align:center;color:#94a3b8">Chưa có</p>';
-    deps.forEach(function(d) { var amt = Number(d.amount) || 0, color = amt > 0 ? '#22c55e' : '#ef4444', sign = amt > 0 ? '+' : ''; html += '<div style="border-left:3px solid ' + color + ';padding:8px;margin-bottom:6px;background:#0a0b0f;border-radius:6px"><div style="font-weight:700;color:' + color + '">' + sign + fmt(amt) + '</div><div style="font-size:12px;color:#8b93a7">' + esc(d.note || '') + '</div></div>'; });
+    deps.forEach(function(d) {
+      var amt = Number(d.amount) || 0, color = amt > 0 ? '#22c55e' : '#ef4444', sign = amt > 0 ? '+' : '';
+      html += '<div style="border-left:3px solid ' + color + ';padding:8px;margin-bottom:6px;background:#0a0b0f;border-radius:6px"><div style="font-weight:700;color:' + color + '">' + sign + fmt(amt) + '</div><div style="font-size:12px;color:#8b93a7">' + esc(d.note || '') + '</div></div>';
+    });
     document.getElementById('histTitle').textContent = 'LỊCH SỬ NẠP';
     document.getElementById('histContent').innerHTML = html;
     openModal('historyModal');
@@ -187,7 +202,6 @@ function openKeyModal() { var ki = document.getElementById('keyInput'); if (ki) 
 function openAvatarModal() { var inp = document.getElementById('avBase64Input'); if (inp) inp.value = ''; var st = document.getElementById('avStatus'); if (st) st.textContent = ''; openModal('avatarModal'); }
 function saveAvatar() { var val = document.getElementById('avBase64Input').value.trim(); var status = document.getElementById('avStatus'); if (!val) { if (status) status.textContent = 'Chưa có'; return; } var src = val.indexOf('data:') === 0 ? val : 'data:image/png;base64,' + val; setAvatarToStorage(src); applyAvatarEverywhere(src); if (status) status.textContent = 'Đã lưu'; setTimeout(function() { closeModal('avatarModal'); }, 800); }
 function resetAvatar() { setAvatarToStorage(''); applyAvatarEverywhere(window.CONFIG.avatar || DEFAULT_AVATAR); }
-
 function openDrawer() { var d = document.getElementById('drawer'); if (d) d.classList.add('show'); var m = document.getElementById('drawerMask'); if (m) m.classList.add('show'); }
 function closeDrawer() { var d = document.getElementById('drawer'); if (d) d.classList.remove('show'); var m = document.getElementById('drawerMask'); if (m) m.classList.remove('show'); }
 
