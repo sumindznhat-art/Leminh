@@ -4,17 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>TOOL TÀI XỈU MINHIOS</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;overflow:hidden;font-family:'Inter',-apple-system,sans-serif;color:#f3f4f6;background:#08090c;font-weight:500}
-button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
-input,textarea,select{font-family:inherit;outline:none}
-:root{--bg:#08090c;--bg2:#0f1115;--card:#141620;--card2:#1a1d29;--line:#232734;--line2:#2e3342;--text:#f3f4f6;--sub:#8b93a7;--muted:#5a6175;--pink:#ff3d71;--purple:#8b5cf6;--green:#22c55e;--yellow:#fbbf24;--red:#ef4444}
-
-#login-screen{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;background:radial-gradient(ellipse at top,#1a0a15 0%,#08090c 50%)}
-.login-box{position:relative;width:100%;max-width:380px;padding:36px 26px 28px;background:linear-gradient(180deg,#141620,#0f1115);border-radius:24px;border:1px solid var(--line);box-shadow:0 24px 80px rgba(0,0,0,.6);text-align:center;margin:auto}
+html,body{height:100%;overflow:hidden;font-family:'Inter',sans-serif;color:#f3f4f6;background:#08090c;font-weight:500}
+:root{--pink:#ff3d71;--purple:#8b5cf6;--green:#22c55e;--red:#ef4444;--muted:#5a6175;--sub:#8b93a7;--line:#232734}
+#login-screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;background:radial-gradient(ellipse at top,#1a0a15 0%,#08090c 50%)}
+.login-box{width:100%;max-width:380px;padding:36px 26px 28px;background:linear-gradient(180deg,#141620,#0f1115);border-radius:24px;border:1px solid var(--line);box-shadow:0 24px 80px rgba(0,0,0,.6);text-align:center;margin:auto}
 .login-title{font-size:24px;font-weight:900;background:linear-gradient(135deg,#fff 0%,#ff3d71 80%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px}
 .login-sub{color:var(--sub);font-size:12.5px;font-weight:600;margin-bottom:20px;display:flex;align-items:center;justify-content:center;gap:6px}
 .login-sub i{color:var(--pink);font-size:13px}
@@ -25,27 +22,27 @@ input,textarea,select{font-family:inherit;outline:none}
 .login-avatar img{position:relative;width:100%;height:100%;border-radius:50%;object-fit:cover;z-index:2;background:#000;border:2px solid #1a1d29}
 .login-online-dot{position:absolute;bottom:4px;right:4px;width:18px;height:18px;background:var(--green);border:3px solid #141620;border-radius:50%;z-index:3;box-shadow:0 0 12px rgba(34,197,94,.6)}
 .auth-tabs{display:flex;gap:4px;margin-bottom:18px;background:#0a0b0f;padding:4px;border-radius:12px}
-.auth-tab{flex:1;padding:11px;border-radius:9px;background:transparent;color:var(--sub);font-size:12px;font-weight:700}
+.auth-tab{flex:1;padding:11px;border-radius:9px;background:transparent;color:var(--sub);font-size:12px;font-weight:700;cursor:pointer;border:none}
 .auth-tab.active{background:linear-gradient(135deg,#ff3d71,#e11d5c);color:#fff;box-shadow:0 4px 16px rgba(255,61,113,.4)}
 .login-input-group{position:relative;margin-bottom:10px}
 .login-input-group .icon-left{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px;z-index:2}
 .login-input-group:focus-within .icon-left{color:var(--pink)}
-.login-input-group input{width:100%;padding:14px 16px 14px 42px;background:#0a0b0f;border:1.5px solid var(--line);border-radius:12px;color:var(--text);font-size:13.5px;font-weight:600}
+.login-input-group input{width:100%;padding:14px 16px 14px 42px;background:#0a0b0f;border:1.5px solid var(--line);border-radius:12px;color:#f3f4f6;font-size:13.5px;font-weight:600;outline:none;font-family:inherit}
 .login-input-group input::placeholder{color:var(--muted)}
 .login-input-group input:focus{border-color:var(--pink)}
-.login-btn{width:100%;padding:15px;border-radius:12px;margin-top:10px;background:linear-gradient(135deg,#ff3d71,#e11d5c);color:#fff;font-size:13px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;box-shadow:0 8px 24px rgba(255,61,113,.35);display:flex;align-items:center;justify-content:center;gap:8px}
+.login-btn{width:100%;padding:15px;border-radius:12px;margin-top:10px;background:linear-gradient(135deg,#ff3d71,#e11d5c);color:#fff;font-size:13px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;box-shadow:0 8px 24px rgba(255,61,113,.35);display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;border:none;font-family:inherit}
 .login-btn:active{transform:scale(.98)}
 .login-spinner{display:none;width:16px;height:16px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
 .login-error{margin-top:12px;min-height:16px;font-size:12px;font-weight:700;color:var(--red)}
+.login-success{margin-top:12px;min-height:16px;font-size:12px;font-weight:700;color:var(--green)}
 .login-footer{margin-top:16px;color:var(--muted);font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
-.success-msg{margin-top:12px;min-height:16px;font-size:12px;font-weight:700;color:var(--green)}
 </style>
 </head>
 <body>
 
 <div id="login-screen">
   <div class="login-box">
-    <h1 class="login-title">TOOL TÀI XỈU MINHIOS</h1>
+    <h1 class="login-title">TOOL TÀI XỈU BONIOS</h1>
     <p class="login-sub"><i class="fa-solid fa-shield-halved"></i> <span id="subText">Đăng nhập hệ thống</span></p>
     <div class="login-avatar">
       <div class="login-avatar-ring"></div>
@@ -57,8 +54,8 @@ input,textarea,select{font-family:inherit;outline:none}
       <button class="auth-tab" id="tabReg" onclick="switchTab('reg')">ĐĂNG KÝ</button>
     </div>
     <div id="formLogin">
-      <div class="login-input-group"><i class="fa-solid fa-envelope icon-left"></i><input type="email" id="loginEmail" placeholder="Email..." autocomplete="off"></div>
-      <div class="login-input-group"><i class="fa-solid fa-lock icon-left"></i><input type="password" id="loginPass" placeholder="Mật khẩu..." autocomplete="off"></div>
+      <div class="login-input-group"><i class="fa-solid fa-envelope icon-left"></i><input type="email" id="loginEmail" placeholder="Email..."></div>
+      <div class="login-input-group"><i class="fa-solid fa-lock icon-left"></i><input type="password" id="loginPass" placeholder="Mật khẩu..."></div>
       <button class="login-btn" id="btnLogin" onclick="doLogin()"><span class="login-spinner" id="loginSpinner"></span><span id="btnLoginText"><i class="fa-solid fa-right-to-bracket"></i> ĐĂNG NHẬP</span></button>
     </div>
     <div id="formReg" style="display:none">
@@ -69,114 +66,90 @@ input,textarea,select{font-family:inherit;outline:none}
       <button class="login-btn" id="btnReg" onclick="doRegister()"><span class="login-spinner" id="regSpinner"></span><span id="btnRegText"><i class="fa-solid fa-user-plus"></i> ĐĂNG KÝ</span></button>
     </div>
     <div class="login-error" id="loginError"></div>
-    <div class="success-msg" id="successMsg"></div>
-    <p class="login-footer">© TOOL • MINHIOS 2026</p>
+    <div class="login-success" id="successMsg"></div>
+    <p class="login-footer">© TOOL • BONIOS </p>
   </div>
 </div>
 
 <script>
-/* ========= API CONFIG ========= */
 var API_BASE = "https://toolkiemlua2026.site/api";
-
 function $(id){return document.getElementById(id)}
-function setError(m){var e=$('loginError');if(e)e.textContent=m||''}
-function setSuccess(m){var e=$('successMsg');if(e)e.textContent=m||''}
-function setLoading(spin,btn,txt,load){
+function setErr(m){var e=$('loginError');if(e)e.textContent=m||''}
+function setOk(m){var e=$('successMsg');if(e)e.textContent=m||''}
+function setLoad(spin,btn,txt,load){
   var s=$(spin),b=$(btn);
   if(s)s.style.display=load?'inline-block':'none';
   if(b)b.innerHTML=txt;
 }
 function switchTab(tab){
-  setError('');setSuccess('');
+  setErr('');setOk('');
   var tl=$('tabLogin'),tr=$('tabReg'),fl=$('formLogin'),fr=$('formReg');
-  if(tab==='login'){
-    tl.classList.add('active');tr.classList.remove('active');
-    fl.style.display='';fr.style.display='none';
-  } else {
-    tr.classList.add('active');tl.classList.remove('active');
-    fr.style.display='';fl.style.display='none';
-  }
+  if(tab==='login'){tl.classList.add('active');tr.classList.remove('active');fl.style.display='';fr.style.display='none'}
+  else{tr.classList.add('active');tl.classList.remove('active');fr.style.display='';fl.style.display='none'}
 }
-
-/* ========= API CALL ========= */
 function apiCall(action,params){
   return new Promise(function(resolve){
-    var xhr=new XMLHttpRequest();
-    var done=false;
-    function finish(r){if(done)return;done=true;resolve(r)}
+    var xhr=new XMLHttpRequest();var done=false;
+    function fin(r){if(done)return;done=true;resolve(r)}
     try{
       xhr.open('POST',API_BASE+'/index.php?action='+encodeURIComponent(action),true);
       xhr.setRequestHeader('Content-Type','application/json');
       xhr.timeout=15000;
       xhr.onload=function(){
         var t=xhr.responseText||'';
-        if(!t)return finish({success:false,error:'Server không phản hồi'});
-        try{finish(JSON.parse(t))}catch(e){finish({success:false,error:'Lỗi JSON: '+t.substring(0,100)})}
+        if(!t)return fin({success:false,error:'Server không phản hồi'});
+        try{fin(JSON.parse(t))}catch(e){fin({success:false,error:'Lỗi: '+t.substring(0,150)})}
       };
-      xhr.onerror=function(){finish({success:false,error:'Không kết nối server'})};
-      xhr.ontimeout=function(){finish({success:false,error:'Timeout'})};
+      xhr.onerror=function(){fin({success:false,error:'Không kết nối server'})};
+      xhr.ontimeout=function(){fin({success:false,error:'Timeout'})};
       xhr.send(JSON.stringify(params||{}));
-    }catch(e){finish({success:false,error:e.message})}
+    }catch(e){fin({success:false,error:e.message})}
   });
 }
-
-/* ========= LOGIN ========= */
 var _busy=false;
 function doLogin(){
   if(_busy)return;
-  setError('');setSuccess('');
+  setErr('');setOk('');
   var email=($('loginEmail').value||'').trim().toLowerCase();
   var pass=$('loginPass').value||'';
-  if(!email||!pass)return setError('Nhập đầy đủ!');
+  if(!email||!pass)return setErr('Nhập đầy đủ!');
   _busy=true;
-  setLoading('loginSpinner','btnLoginText','ĐANG ĐĂNG NHẬP...',true);
+  setLoad('loginSpinner','btnLoginText','ĐANG ĐĂNG NHẬP...',true);
   apiCall('login',{email:email,password:pass}).then(function(r){
     if(r&&r.success&&r.user){
-      try{localStorage.setItem('bonsicola_session',JSON.stringify({email:email,password:pass,user:r.user}));}catch(e){}
-      setSuccess('ĐĂNG NHẬP THÀNH CÔNG! Đang chuyển...');
-      setTimeout(function(){location.href='app.html'},800);
-    } else {
-      setError((r&&r.error)||'Sai tài khoản!');
-    }
+      try{localStorage.setItem('bonsicola_session',JSON.stringify({email:email,password:pass,user:r.user}))}catch(e){}
+      setOk('ĐĂNG NHẬP OK! Đang chuyển...');
+      setTimeout(function(){location.href='app.html'},700);
+    } else setErr((r&&r.error)||'Sai tài khoản!');
   }).then(function(){
     _busy=false;
-    setLoading('loginSpinner','btnLoginText','<i class="fa-solid fa-right-to-bracket"></i> ĐĂNG NHẬP',false);
+    setLoad('loginSpinner','btnLoginText','<i class="fa-solid fa-right-to-bracket"></i> ĐĂNG NHẬP',false);
   });
 }
-
-/* ========= REGISTER ========= */
 var _rbusy=false;
 function doRegister(){
   if(_rbusy)return;
-  setError('');setSuccess('');
+  setErr('');setOk('');
   var name=($('regName').value||'').trim();
   var email=($('regEmail').value||'').trim().toLowerCase();
   var p1=$('regPass').value||'';
   var p2=$('regPass2').value||'';
-  if(!name||!email||!p1||!p2)return setError('Nhập đầy đủ!');
-  if(p1.length<6)return setError('Pass từ 6 ký tự!');
-  if(p1!==p2)return setError('Pass không khớp!');
+  if(!name||!email||!p1||!p2)return setErr('Nhập đầy đủ!');
+  if(p1.length<6)return setErr('Pass từ 6 ký tự!');
+  if(p1!==p2)return setErr('Pass không khớp!');
   _rbusy=true;
-  setLoading('regSpinner','btnRegText','ĐANG XỬ LÝ...',true);
+  setLoad('regSpinner','btnRegText','ĐANG XỬ LÝ...',true);
   apiCall('register',{name:name,email:email,password:p1}).then(function(r){
-    if(r&&r.success){
-      setSuccess('ĐĂNG KÝ OK! Hãy đăng nhập.');
-      switchTab('login');
-      $('loginEmail').value=email;
-    } else setError((r&&r.error)||'Đăng ký lỗi!');
+    if(r&&r.success){setOk('ĐĂNG KÝ OK! Đăng nhập ngay.');switchTab('login');$('loginEmail').value=email}
+    else setErr((r&&r.error)||'Đăng ký lỗi!');
   }).then(function(){
     _rbusy=false;
-    setLoading('regSpinner','btnRegText','<i class="fa-solid fa-user-plus"></i> ĐĂNG KÝ',false);
+    setLoad('regSpinner','btnRegText','<i class="fa-solid fa-user-plus"></i> ĐĂNG KÝ',false);
   });
 }
-
-/* ========= TEST API ON LOAD ========= */
 apiCall('ping',{}).then(function(r){
-  if(r&&r.success){
-    $('subText').textContent='API OK · Sẵn sàng';
-  } else {
-    $('subText').textContent='⚠️ API lỗi: '+((r&&r.error)||'unknown');
-  }
+  if(r&&r.success)$('subText').textContent='API OK · Sẵn sàng';
+  else $('subText').textContent='⚠️ API: '+((r&&r.error)||'lỗi');
 });
 </script>
 </body>
