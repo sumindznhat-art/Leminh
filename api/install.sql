@@ -1,8 +1,4 @@
--- ============================================================
--- TOOL MINHIOS — DATABASE STRUCTURE
--- Chạy trong phpMyAdmin → chọn DB keckyxbd_bonsicola → SQL → Go
--- ============================================================
-
+-- TOOL MINHIOS DATABASE
 CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   email VARCHAR(150) UNIQUE NOT NULL,
@@ -53,18 +49,7 @@ CREATE TABLE IF NOT EXISTS config (
   v LONGTEXT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Tạo admin mặc định
 INSERT IGNORE INTO users (email, password, name, balance, key_expiry, is_admin, ip, last_login, created_at)
-VALUES (
-  'leminhdz@gmail.com',
-  'admin123',
-  'Admin BONSICOLA',
-  999999999,
-  9999999999999,
-  1,
-  'local',
-  UNIX_TIMESTAMP()*1000,
-  UNIX_TIMESTAMP()*1000
-);
+VALUES ('leminhdz@gmail.com', 'admin123', 'Admin', 999999999, 9999999999999, 1, 'local', UNIX_TIMESTAMP()*1000, UNIX_TIMESTAMP()*1000);
 
 SELECT 'DATABASE OK' AS status;
