@@ -1,14 +1,14 @@
 /* ============================================================
-   ENGINE.JS — V6 ULTIMATE · 34 THUẬT TOÁN · BÁM CẦU CHUYÊN SÂU
-   + Bám cầu bệt · cầu 1-1 · cầu 2-2 · cầu 3-3 · cầu nghiêng
-   + Cầu đảo · cầu so le · cầu bẻ · cầu gãy · cầu bệt dài
+   ENGINE.JS 
    ============================================================ */
 
 const TEEngine = (() => {
 
+  /* Nhóm các phần tử liên tiếp giống nhau */
   const groupRuns = (arr) => {
     if (!arr.length) return [];
-    const out = []; let last = arr[0], count = 1;
+    const out = [];
+    let last = arr[0], count = 1;
     for (let i = 1; i < arr.length; i++) {
       if (arr[i] === last) count++;
       else { out.push({ k: last, n: count }); last = arr[i]; count = 1; }
@@ -20,664 +20,817 @@ const TEEngine = (() => {
   class TaiXiuEngine {
     constructor() {
       this.history = [];
-      this.dice = [];
-      this.totals = [];
-      this.max = 500;
-    }
-
-    parseDice(it) {
-      const maps = [['dice1','dice2','dice3'],['xucxac1','xucxac2','xucxac3'],['d1','d2','d3'],['x1','x2','x3']];
-      for (const [a,b,c] of maps) {
-        if (it[a] != null && it[b] != null && it[c] != null) {
-          const ar = [+it[a], +it[b], +it[c]];
-          if (ar.every(n => n >= 1 && n <= 6)) return ar;
-        }
-      }
-      for (const f of ['dice','dices','xucxac']) {
-        if (Array.isArray(it[f]) && it[f].length >= 3) {
-          const ar = it[f].slice(0,3).map(Number);
-          if (ar.every(n => n >= 1 && n <= 6)) return ar;
-        }
-      }
-      return null;
+      this.max = 1000;
     }
 
     load(items) {
-      this.history = []; this.dice = []; this.totals = [];
+      this.history = [];
       for (const it of items) {
         const r = it.resultTruyenThong || it.result || it.ketQua;
         if (r !== 'TAI' && r !== 'XIU') continue;
         this.history.push(r);
-        const d = this.parseDice(it);
-        this.dice.push(d);
-        this.totals.push(d ? d[0]+d[1]+d[2] : null);
       }
       if (this.history.length > this.max) {
-        const c = -this.max;
-        this.history = this.history.slice(c);
-        this.dice = this.dice.slice(c);
-        this.totals = this.totals.slice(c);
+        this.history = this.history.slice(-this.max);
       }
     }
 
     /* ============================================================
-       NHÓM BÁM CẦU CHUYÊN SÂU (10 thuật toán mới)
+       UTILITY: So khớp pattern & đếm kết quả thực tế
+       ============================================================ */
+    matchPattern(pattern) {
+      const c = this.history;
+      const L = pattern.length;
+      if (c.length < L + 3) return null;
+      let tHit = 0, xHit = 0;
+      for (let i = 0; i <= c.length - L - 1; i++) {
+        let ok = true;
+        for (let j = 0; j < L; j++) {
+          if (c[i + j] !== pattern[j]) { ok = false; break; }
+        }
+        if (!ok) continue;
+        // Bỏ qua nếu i+L chính là phiên hiện tại (tránh nhìn trước tương lai)
+        if (i + L >= c.length) break;
+        if (c[i + L] === 'TAI') tHit++; else xHit++;
+      }
+      const total = tHit + xHit;
+      if (total < 3) return null;
+      return {
+        tai: tHit,
+        xiu: xHit,
+        total: total,
+        confidence: Math.max(tHit, xHit) / total,
+        suggest: tHit > xHit ? 'TAI' : (xHit > tHit ? 'XIU' : null)
+      };
+    }
+
+    /* Đếm tổng quát cho 1 bên trong N phiên gần */
+    countRecent(n) {
+      const c = this.history.slice(-n);
+      let t = 0, x = 0;
+      for (const v of c) if (v === 'TAI') t++; else x++;
+      return { tai: t, xiu: x, total: c.length };
+    }
+
+    /* ============================================================
+       NHÓM 1: BÁM CẦU THUẦN (14 thuật toán)
        ============================================================ */
 
-    /* 1. BÁM CẦU BỆT — cầu 1 bên dài, theo tiếp */
-    bamCauBet() {
+    /* 1. CẦU BỆT — chuỗi liên tiếp cùng bên */
+    cauBet() {
       const c = this.history;
-      if (c.length < 6) return null;
+      if (c.length < 8) return null;
+      const last = c[c.length - 1];
       let streak = 1;
-      for (let i = c.length - 1; i > 0; i--) {
-        if (c[i] === c[i-1]) streak++;
+      for (let i = c.length - 2; i >= 0; i--) {
+        if (c[i] === last) streak++;
         else break;
       }
-      if (streak < 4) return null;
-      // Xác suất bệt tiếp tục dựa vào lịch sử
-      let continuations = 0, opportunities = 0;
-      for (let i = 4; i < c.length; i++) {
+      if (streak < 3) return null;
+
+      // Đếm số lần chuỗi có độ dài >= streak tiếp tục trong lịch sử
+      let cont = 0, total = 0;
+      for (let i = streak; i < c.length; i++) {
         let s = 1;
-        for (let j = i - 1; j > 0; j--) { if (c[j] === c[j-1]) s++; else break; }
-        if (s >= 4 && s <= 8) {
-          opportunities++;
-          if (c[i] === c[i-1]) continuations++;
+        for (let j = i - 1; j > 0; j--) {
+          if (c[j] === c[j - 1]) s++;
+          else break;
+        }
+        if (s >= streak) {
+          total++;
+          if (c[i] === c[i - 1]) cont++;
         }
       }
-      if (opportunities < 3) return null;
-      const pCont = continuations / opportunities;
-      return { conf: Math.abs(pCont - 0.5) * 2, suggest: pCont > 0.5 ? c[c.length-1] : (c[c.length-1] === 'TAI' ? 'XIU' : 'TAI') };
-    }
+      if (total < 3) return null;
+      const pCont = cont / total;
 
-    /* 2. BÁM CẦU 1-1 — T-X-T-X-T-X... */
-    bamCau11() {
-      const c = this.history;
-      if (c.length < 6) return null;
-      const win = c.slice(-6);
-      let pattern11 = 0;
-      for (let i = 1; i < win.length; i++) {
-        if (win[i] !== win[i-1]) pattern11++;
+      // Nếu chuỗi quá dài (>7), khả năng bẻ cao
+      if (streak >= 8) {
+        return { confidence: Math.min(0.85, 1 - pCont + 0.3),
+                 suggest: last === 'TAI' ? 'XIU' : 'TAI' };
       }
-      if (pattern11 < 5) return null;
-      const last = c[c.length-1];
-      const next = last === 'TAI' ? 'XIU' : 'TAI';
-      return { conf: 0.72, suggest: next };
+      if (pCont > 0.55) return { confidence: pCont, suggest: last };
+      if (pCont < 0.45) return { confidence: 1 - pCont, suggest: last === 'TAI' ? 'XIU' : 'TAI' };
+      return null;
     }
 
-    /* 3. BÁM CẦU 2-2 — TT-XX-TT-XX */
-    bamCau22() {
+    /* 2. CẦU 1-1 — T-X-T-X-T-X */
+    cau11() {
       const c = this.history;
       if (c.length < 8) return null;
-      const win = c.slice(-8);
-      let matches = 0;
-      for (let i = 0; i < win.length - 2; i += 2) {
-        if (win[i] === win[i+1] && win[i+2] === win[i+3] && win[i] !== win[i+2]) matches++;
+      const win = c.slice(-6);
+      let flips = 0;
+      for (let i = 1; i < win.length; i++) if (win[i] !== win[i - 1]) flips++;
+      if (flips < 5) return null;
+
+      // Xác thực: pattern 6 phần tử đảo liên tục có tiếp tục?
+      let cont = 0, total = 0;
+      for (let i = 6; i < c.length; i++) {
+        let ok = true;
+        for (let j = 1; j < 6; j++) {
+          if (c[i - 6 + j] === c[i - 6 + j - 1]) { ok = false; break; }
+        }
+        if (ok) {
+          total++;
+          if (c[i] !== c[i - 1]) cont++;
+        }
       }
-      if (matches < 3) return null;
-      const groups = groupRuns(win);
-      if (groups.length < 4) return null;
-      const lastG = groups[groups.length-1];
-      if (lastG.n === 2) {
-        const opposite = lastG.k === 'TAI' ? 'XIU' : 'TAI';
-        return { conf: 0.75, suggest: opposite };
-      }
-      return null;
+      const pCont = total >= 3 ? cont / total : 0.6;
+      return { confidence: pCont, suggest: c[c.length - 1] === 'TAI' ? 'XIU' : 'TAI' };
     }
 
-    /* 4. BÁM CẦU 3-3 — TTT-XXX-TTT */
-    bamCau33() {
+    /* 3. CẦU 2-2 */
+    cau22() { return this.cauNN(2); }
+    /* 4. CẦU 3-3 */
+    cau33() { return this.cauNN(3); }
+    /* 5. CẦU 4-4 */
+    cau44() { return this.cauNN(4); }
+
+    /* Hàm chung cho cầu N-N */
+    cauNN(n) {
       const c = this.history;
-      if (c.length < 12) return null;
-      const win = c.slice(-12);
-      const groups = groupRuns(win);
-      if (groups.length < 4) return null;
-      // Kiểm tra chuỗi nhóm xen kẽ với n=3
-      let matchN3 = 0;
-      for (let i = 0; i < groups.length - 1; i++) {
-        if (groups[i].n === 3 && groups[i+1].n === 3 && groups[i].k !== groups[i+1].k) matchN3++;
+      const need = n * 4;
+      if (c.length < need) return null;
+      const groupsAll = groupRuns(c.slice(-need));
+
+      // Kiểm tra 4 nhóm cuối có phải là n-n-n-n xen kẽ
+      if (groupsAll.length < 4) return null;
+      const recent4 = groupsAll.slice(-4);
+      let valid = true;
+      for (let i = 0; i < recent4.length; i++) {
+        if (recent4[i].n !== n) { valid = false; break; }
       }
-      if (matchN3 < 2) return null;
-      const last = groups[groups.length-1];
-      if (last.n <= 3) {
-        const opposite = last.k === 'TAI' ? 'XIU' : 'TAI';
-        return { conf: 0.78, suggest: last.n === 3 ? opposite : last.k };
+      if (!valid) return null;
+      // Kiểm tra xen kẽ bên
+      for (let i = 1; i < recent4.length; i++) {
+        if (recent4[i].k === recent4[i - 1].k) { valid = false; break; }
       }
-      return null;
+      if (!valid) return null;
+
+      // Nhóm cuối nếu đã đủ n → đảo bên
+      const lastG = recent4[recent4.length - 1];
+      if (lastG.n === n) {
+        return { confidence: 0.78, suggest: lastG.k === 'TAI' ? 'XIU' : 'TAI' };
+      }
+      // Nhóm cuối chưa đủ n → tiếp tục bên đó
+      return { confidence: 0.72, suggest: lastG.k };
     }
 
-    /* 5. CẦU NGHIÊNG — xu hướng lệch về 1 phía */
+    /* 6. CẦU NGHIÊNG — 1 bên chiếm ưu thế rõ */
     cauNghieng() {
       const c = this.history;
-      if (c.length < 15) return null;
-      const win = c.slice(-15);
+      if (c.length < 20) return null;
+      const win = c.slice(-20);
       let t = 0, x = 0;
-      win.forEach(v => { if (v === 'TAI') t++; else x++; });
+      for (const v of win) if (v === 'TAI') t++; else x++;
       const ratio = t / win.length;
-      if (ratio > 0.66) return { conf: Math.min(0.82, ratio), suggest: 'TAI' };
-      if (ratio < 0.34) return { conf: Math.min(0.82, 1 - ratio), suggest: 'XIU' };
+      if (ratio > 0.68) return { confidence: Math.min(0.82, ratio), suggest: 'TAI' };
+      if (ratio < 0.32) return { confidence: Math.min(0.82, 1 - ratio), suggest: 'XIU' };
       return null;
     }
 
-    /* 6. CẦU ĐẢO — Đảo chiều liên tiếp */
-    cauDao() {
-      const c = this.history;
-      if (c.length < 8) return null;
-      const win = c.slice(-8);
-      let flips = 0;
-      for (let i = 1; i < win.length; i++) if (win[i] !== win[i-1]) flips++;
-      if (flips < 6) return null;
-      // Đang đảo mạnh → khả năng cao tiếp tục đảo 1 lần nữa
-      const last = c[c.length-1];
-      return { conf: 0.68, suggest: last === 'TAI' ? 'XIU' : 'TAI' };
-    }
-
-    /* 7. CẦU SO LE — pattern T-X-X-T-T-X-X-T */
-    cauSoLe() {
-      const c = this.history;
-      if (c.length < 10) return null;
-      const pat = c.slice(-8);
-      let best = null;
-      // Thử match các pattern mẫu
-      const patterns = [
-        ['TAI','XIU','XIU','TAI','TAI','XIU','XIU','TAI'],
-        ['XIU','TAI','TAI','XIU','XIU','TAI','TAI','XIU'],
-        ['TAI','TAI','XIU','TAI','XIU','XIU','TAI','XIU'],
-        ['XIU','XIU','TAI','XIU','TAI','TAI','XIU','TAI']
-      ];
-      for (const p of patterns) {
-        let match = 0;
-        for (let i = 0; i < 8; i++) if (pat[i] === p[i]) match++;
-        if (match >= 7) return { conf: 0.7, suggest: p[7] };
-      }
-      return null;
-    }
-
-    /* 8. CẦU BẺ — đang bệt tự nhiên bẻ */
+    /* 7. CẦU BẺ — chuỗi bệt bị bẻ tại phiên thứ k */
     cauBe() {
       const c = this.history;
       if (c.length < 15) return null;
-      // Đếm số lần bệt dài bị bẻ ở độ dài 5-8
-      let totalBe = 0, chances = 0;
-      for (let i = 5; i < c.length; i++) {
+
+      // Tính xác suất bệt bị bẻ ở độ dài 4-7
+      let broke = 0, total = 0;
+      for (let i = 4; i < c.length - 1; i++) {
         let s = 1;
-        for (let j = i - 1; j > 0; j--) { if (c[j] === c[j-1]) s++; else break; }
-        if (s >= 5 && s <= 8) {
-          chances++;
-          if (i < c.length && c[i] !== c[i-1]) totalBe++;
+        for (let j = i - 1; j > 0; j--) {
+          if (c[j] === c[j - 1]) s++;
+          else break;
+        }
+        if (s >= 4 && s <= 7) {
+          total++;
+          if (c[i] !== c[i - 1]) broke++;
         }
       }
-      if (chances < 3) return null;
-      const pBe = totalBe / chances;
-      let streak = 1;
-      for (let i = c.length - 1; i > 0; i--) { if (c[i] === c[i-1]) streak++; else break; }
-      if (streak < 5) return null;
-      if (pBe > 0.6) {
-        const opposite = c[c.length-1] === 'TAI' ? 'XIU' : 'TAI';
-        return { conf: pBe, suggest: opposite };
+      if (total < 4) return null;
+      const pBreak = broke / total;
+
+      // Chuỗi hiện tại
+      let cur = 1;
+      for (let i = c.length - 1; i > 0; i--) {
+        if (c[i] === c[i - 1]) cur++;
+        else break;
+      }
+      if (cur < 4) return null;
+
+      if (cur >= 5 && pBreak > 0.5) {
+        return { confidence: pBreak, suggest: c[c.length - 1] === 'TAI' ? 'XIU' : 'TAI' };
+      }
+      if (cur >= 4 && pBreak < 0.4) {
+        return { confidence: 1 - pBreak, suggest: c[c.length - 1] };
       }
       return null;
     }
 
-    /* 9. CẦU GÃY — bệt bị gãy giữa chừng */
+    /* 8. CẦU GÃY — pattern 3-1-2-1-3 (nhóm dài bị cắt) */
     cauGay() {
       const c = this.history;
       if (c.length < 20) return null;
       const groups = groupRuns(c.slice(-20));
       if (groups.length < 6) return null;
-      // Nếu 2 nhóm cuối có n nhỏ xen kẽ → sắp bệt
-      const lastTwo = groups.slice(-3);
-      if (lastTwo.length === 3 && lastTwo[0].n >= 3 && lastTwo[1].n === 1 && lastTwo[2].n === 1) {
-        return { conf: 0.72, suggest: lastTwo[2].k };
+      const last3 = groups.slice(-3);
+      // 3 nhóm: dài - ngắn - dài, khác bên
+      if (last3[0].n >= 3 && last3[1].n <= 2 && last3[2].n >= 3 &&
+          last3[0].k !== last3[2].k) {
+        return { confidence: 0.7, suggest: last3[2].k === 'TAI' ? 'XIU' : 'TAI' };
+      }
+      // 3 nhóm: ngắn - dài - ngắn
+      if (last3[0].n <= 2 && last3[1].n >= 3 && last3[2].n <= 2) {
+        return { confidence: 0.68, suggest: last3[2].k };
       }
       return null;
     }
 
-    /* 10. CẦU BỆT DÀI — bệt > 8, khả năng còn tiếp */
-    bamBetDai() {
+    /* 9. CẦU ĐẢO — đảo chiều liên tục */
+    cauDao() {
       const c = this.history;
       if (c.length < 10) return null;
+      const win = c.slice(-10);
+      let flips = 0;
+      for (let i = 1; i < win.length; i++) if (win[i] !== win[i - 1]) flips++;
+      if (flips < 8) return null;
+
+      // Kiểm tra pattern 10 phần tử đảo liên tục
+      let cont = 0, total = 0;
+      for (let i = 10; i < c.length; i++) {
+        let ok = true;
+        for (let j = 1; j < 10; j++) {
+          if (c[i - 10 + j] === c[i - 10 + j - 1]) { ok = false; break; }
+        }
+        if (ok) {
+          total++;
+          if (c[i] !== c[i - 1]) cont++;
+        }
+      }
+      const pCont = total >= 3 ? cont / total : 0.7;
+      return { confidence: pCont, suggest: c[c.length - 1] === 'TAI' ? 'XIU' : 'TAI' };
+    }
+
+    /* 10. CẦU SO LE (pattern 2-1-2-1-2) */
+    cauSoLe() {
+      const c = this.history;
+      if (c.length < 16) return null;
+      const groups = groupRuns(c.slice(-15));
+      if (groups.length < 6) return null;
+      const last6 = groups.slice(-6);
+      // Check: 2,1,2,1,2,1 hoặc 1,2,1,2,1,2
+      const pat1 = [2, 1, 2, 1, 2, 1];
+      const pat2 = [1, 2, 1, 2, 1, 2];
+      const ns = last6.map(g => g.n);
+      const matchPat1 = ns.every((v, i) => v === pat1[i]);
+      const matchPat2 = ns.every((v, i) => v === pat2[i]);
+      if (matchPat1 || matchPat2) {
+        const lastG = groups[groups.length - 1];
+        const nextN = matchPat1 ? 2 : 1;
+        if (lastG.n < nextN) {
+          return { confidence: 0.72, suggest: lastG.k };
+        }
+        return { confidence: 0.72, suggest: lastG.k === 'TAI' ? 'XIU' : 'TAI' };
+      }
+      return null;
+    }
+
+    /* 11. CẦU BỆT DÀI (streak > 8 có xu hướng tiếp tục) */
+    bamBetDai() {
+      const c = this.history;
+      if (c.length < 12) return null;
+      const last = c[c.length - 1];
       let streak = 1;
-      for (let i = c.length - 1; i > 0; i--) { if (c[i] === c[i-1]) streak++; else break; }
+      for (let i = c.length - 2; i >= 0; i--) {
+        if (c[i] === last) streak++;
+        else break;
+      }
       if (streak < 8) return null;
-      // Bệt dài thường tiếp tục đến 12-15
-      return { conf: 0.8, suggest: c[c.length-1] };
+
+      // Đếm trong lịch sử: khi bệt >= 8, có tiếp tục đến >= 10?
+      let cont = 0, total = 0;
+      for (let i = 8; i < c.length; i++) {
+        let s = 1;
+        for (let j = i - 1; j > 0; j--) {
+          if (c[j] === c[j - 1]) s++;
+          else break;
+        }
+        if (s >= 8) {
+          total++;
+          if (c[i] === c[i - 1]) cont++;
+        }
+      }
+      if (total < 2) return null;
+      const pCont = cont / total;
+      // Bệt dài thường tiếp tục nhưng càng dài càng nguy hiểm
+      const decay = Math.max(0.35, 1 - (streak - 8) * 0.08);
+      if (pCont * decay > 0.5) {
+        return { confidence: pCont * decay, suggest: last };
+      }
+      return { confidence: 1 - pCont * decay, suggest: last === 'TAI' ? 'XIU' : 'TAI' };
+    }
+
+    /* 12. CẦU 3-2-1 giảm dần */
+    cau321() {
+      const c = this.history;
+      if (c.length < 15) return null;
+      const groups = groupRuns(c.slice(-12));
+      if (groups.length < 3) return null;
+      const last3 = groups.slice(-3);
+      const ns = last3.map(g => g.n);
+      // 3-2-1 hoặc 2-1 hoặc 1-2-3 (tăng dần)
+      const decreasing = ns[0] > ns[1] && ns[1] > ns[2];
+      const increasing = ns[0] < ns[1] && ns[1] < ns[2];
+      if (decreasing) {
+        // Tiếp tục giảm → nhóm tới có n = 1 hoặc đảo
+        return { confidence: 0.65, suggest: last3[2].k === 'TAI' ? 'XIU' : 'TAI' };
+      }
+      if (increasing) {
+        // Đang tăng → tiếp tục nhóm cuối
+        return { confidence: 0.68, suggest: last3[2].k };
+      }
+      return null;
+    }
+
+    /* 13. CẦU ĐỐI XỨNG — mirror pattern */
+    cauDoiXung() {
+      const c = this.history;
+      if (c.length < 12) return null;
+      // So sánh 6 phiên gần với 6 phiên trước đó
+      const a = c.slice(-12, -6);
+      const b = c.slice(-6);
+      // Nếu a = đảo của b → cầu đối xứng
+      let mirror = true;
+      for (let i = 0; i < 6; i++) {
+        const oppA = a[i] === 'TAI' ? 'XIU' : 'TAI';
+        if (b[i] !== oppA) { mirror = false; break; }
+      }
+      if (mirror) {
+        return { confidence: 0.7, suggest: b[0] };
+      }
+      return null;
+    }
+
+    /* 14. CẦU ĐẦU-CUỐI (đầu chuỗi = cuối chuỗi) */
+    cauDauCuoi() {
+      const c = this.history;
+      if (c.length < 16) return null;
+      const last8 = c.slice(-8);
+      const prev8 = c.slice(-16, -8);
+      // Check nếu chuỗi 8 phiên lặp lại
+      let same = 0;
+      for (let i = 0; i < 8; i++) if (last8[i] === prev8[i]) same++;
+      if (same >= 6) {
+        return { confidence: 0.72, suggest: last8[0] };
+      }
+      return null;
     }
 
     /* ============================================================
-       24 THUẬT TOÁN CŨ (giữ nguyên)
+       NHÓM 2: PATTERN MATCHING (8 thuật toán)
        ============================================================ */
 
-    patternMatch() {
-      const c = this.history; if (c.length < 5) return null;
+    /* 15. N-GRAM match chính */
+    nGramMatch() {
+      const c = this.history;
+      if (c.length < 20) return null;
       let best = null;
-      for (let len = Math.min(8, Math.floor(c.length/2)); len >= 1; len--) {
-        const pattern = c.slice(-len);
-        let tT = 0, tX = 0, matches = 0;
-        for (let i = 0; i <= c.length - len - 1; i++) {
-          let ok = true;
-          for (let j = 0; j < len; j++) if (c[i+j] !== pattern[j]) { ok = false; break; }
-          if (!ok) continue;
-          if (i > 0 && c[i-1] === c[i]) continue;
-          matches++;
-          if (c[i+len] === 'TAI') tT++; else tX++;
-        }
-        if (matches >= len * 3) {
-          const conf = Math.max(tT, tX) / matches;
-          if (!best || conf > best.conf) best = { pT: tT/matches*100, pX: tX/matches*100, conf, suggest: tT > tX ? 'TAI' : 'XIU' };
-        }
-      }
-      return best;
-    }
-
-    deepPattern() {
-      const c = this.history; if (c.length < 12) return null;
-      let best = null;
-      for (let len = 10; len >= 5; len--) {
-        const pattern = c.slice(-len);
-        for (let skip = 1; skip <= 2; skip++) {
-          let tT = 0, tX = 0, matches = 0;
-          for (let i = 0; i <= c.length - len - skip - 1; i++) {
-            let ok = true;
-            for (let j = 0; j < len; j++) if (c[i+j] !== pattern[j]) { ok = false; break; }
-            if (!ok) continue;
-            matches++;
-            const nxt = c[i+len+skip-1];
-            if (nxt === 'TAI') tT++; else tX++;
-          }
-          if (matches >= 3) {
-            const conf = Math.max(tT, tX) / matches;
-            if (!best || conf > best.conf) best = { pT: tT/matches*100, pX: tX/matches*100, conf, suggest: tT > tX ? 'TAI' : 'XIU' };
+      for (let L = Math.min(12, Math.floor(c.length / 2)); L >= 4; L--) {
+        const pattern = c.slice(-L);
+        const stats = this.matchPattern(pattern);
+        if (stats && stats.suggest && stats.total >= 4) {
+          // Ưu tiên pattern dài và có tỉ lệ cao
+          const score = stats.confidence * Math.log(stats.total + 1) + L * 0.02;
+          if (!best || score > best.score) {
+            best = { ...stats, length: L, score };
           }
         }
       }
-      return best;
+      return best ? { confidence: best.confidence, suggest: best.suggest } : null;
     }
 
-    sequenceRNN() {
-      const c = this.history; if (c.length < 25) return null;
-      const W = 8;
-      const cur = c.slice(-W);
-      let sT = 0, sX = 0, matches = 0;
-      for (let i = 0; i < c.length - W - 1; i++) {
-        let sim = 0;
-        for (let j = 0; j < W; j++) if (c[i+j] === cur[j]) sim++;
-        const weight = Math.exp(sim / W * 2) - 1;
-        if (c[i+W] === 'TAI') sT += weight; else sX += weight;
-        if (sim >= W - 2) matches++;
-      }
-      if (matches < 3 || sT + sX < 1) return null;
-      const pT = sT / (sT + sX);
-      return { pT: pT*100, pX: (1-pT)*100, conf: Math.abs(pT - 0.5) * 2, suggest: pT > 0.5 ? 'TAI' : 'XIU' };
+    /* 16. N-GRAM ngắn 3 phiên */
+    nGram3() {
+      const c = this.history;
+      if (c.length < 12) return null;
+      const pattern = c.slice(-3);
+      const stats = this.matchPattern(pattern);
+      if (!stats || !stats.suggest || stats.total < 3) return null;
+      return { confidence: stats.confidence, suggest: stats.suggest };
     }
 
-    recurrentPattern() {
-      const c = this.history; if (c.length < 20) return null;
-      for (let L = 3; L <= 6; L++) {
-        const pat = c.slice(-L);
-        let tCount = 0, xCount = 0;
-        for (let i = 0; i <= c.length - L - 1; i++) {
-          let ok = true;
-          for (let j = 0; j < L; j++) if (c[i+j] !== pat[j]) { ok = false; break; }
-          if (!ok) continue;
-          if (c[i+L] === 'TAI') tCount++; else xCount++;
+    /* 17. N-GRAM trung 5 phiên */
+    nGram5() {
+      const c = this.history;
+      if (c.length < 15) return null;
+      const pattern = c.slice(-5);
+      const stats = this.matchPattern(pattern);
+      if (!stats || !stats.suggest || stats.total < 3) return null;
+      return { confidence: stats.confidence, suggest: stats.suggest };
+    }
+
+    /* 18. N-GRAM dài 8 phiên */
+    nGram8() {
+      const c = this.history;
+      if (c.length < 25) return null;
+      const pattern = c.slice(-8);
+      const stats = this.matchPattern(pattern);
+      if (!stats || !stats.suggest || stats.total < 3) return null;
+      return { confidence: stats.confidence, suggest: stats.suggest };
+    }
+
+    /* 19. Markov chuỗi bậc 1 */
+    markov1() {
+      const c = this.history;
+      if (c.length < 15) return null;
+      const last = c[c.length - 1];
+      let tAfterT = 0, xAfterT = 0, tAfterX = 0, xAfterX = 0;
+      for (let i = 1; i < c.length; i++) {
+        if (c[i - 1] === 'TAI') {
+          if (c[i] === 'TAI') tAfterT++; else xAfterT++;
+        } else {
+          if (c[i] === 'TAI') tAfterX++; else xAfterX++;
         }
-        if (tCount + xCount >= 4) {
-          const pT = tCount / (tCount + xCount);
-          if (Math.abs(pT - 0.5) > 0.15) return { conf: Math.abs(pT - 0.5) * 2, suggest: pT > 0.5 ? 'TAI' : 'XIU' };
-        }
       }
-      return null;
-    }
-
-    neuralLike() {
-      const c = this.history; if (c.length < 30) return null;
-      const W = 10;
-      const weights = [0.5, 0.7, 0.9, 1.1, 1.3, 1.1, 0.9, 0.7, 0.5, 0.3];
-      let sT = 0;
-      const win = c.slice(-W);
-      for (let i = 0; i < W; i++) {
-        const v = win[i] === 'TAI' ? 1 : -1;
-        sT += v * weights[i];
+      let p, suggest;
+      if (last === 'TAI') {
+        const total = tAfterT + xAfterT;
+        if (total < 5) return null;
+        p = tAfterT / total;
+        suggest = p > 0.5 ? 'TAI' : 'XIU';
+      } else {
+        const total = tAfterX + xAfterX;
+        if (total < 5) return null;
+        p = xAfterX / total;
+        suggest = p > 0.5 ? 'XIU' : 'TAI';
       }
-      const sig = 1 / (1 + Math.exp(-sT));
-      if (Math.abs(sig - 0.5) < 0.08) return null;
-      return { pT: sig*100, pX: (1-sig)*100, conf: Math.abs(sig - 0.5) * 2, suggest: sig > 0.5 ? 'TAI' : 'XIU' };
+      const conf = Math.abs(p - 0.5) * 2;
+      if (conf < 0.1) return null;
+      return { confidence: conf, suggest };
     }
 
-    weightedMA() {
-      const c = this.history; if (c.length < 12) return null;
-      const W = 12;
-      let sT = 0, sX = 0, wSum = 0;
-      const win = c.slice(-W);
-      for (let i = 0; i < W; i++) { const w = i + 1; wSum += w; if (win[i] === 'TAI') sT += w; else sX += w; }
-      const pT = sT / wSum;
-      if (Math.abs(pT - 0.5) < 0.05) return null;
-      return { pT: pT*100, pX: (1-pT)*100, conf: Math.abs(pT - 0.5) * 2, suggest: pT > 0.5 ? 'TAI' : 'XIU' };
-    }
-
-    exponentialMA() {
-      const c = this.history; if (c.length < 15) return null;
-      const alpha = 0.3;
-      let emaT = c[0] === 'TAI' ? 1 : 0;
-      for (let i = 1; i < c.length; i++) { const v = c[i] === 'TAI' ? 1 : 0; emaT = alpha * v + (1 - alpha) * emaT; }
-      if (Math.abs(emaT - 0.5) < 0.05) return null;
-      return { pT: emaT*100, pX: (1-emaT)*100, conf: Math.abs(emaT - 0.5) * 2, suggest: emaT > 0.5 ? 'TAI' : 'XIU' };
-    }
-
-    adaptiveThreshold() {
-      const c = this.history; if (c.length < 20) return null;
-      const win = c.slice(-20);
-      const tCount = win.filter(x => x === 'TAI').length;
-      const ratio = tCount / win.length;
-      const variance = win.map((v, i) => (v === 'TAI' ? 1 : 0) - ratio).reduce((a, b) => a + b*b, 0) / win.length;
-      if (variance < 0.15) return null;
-      return { conf: Math.min(0.85, variance * 2), suggest: ratio > 0.5 ? 'XIU' : 'TAI' };
-    }
-
-    markovChain() {
-      const c = this.history; if (c.length < 15) return null;
-      for (let order = 4; order >= 1; order--) {
-        const trans = {};
-        for (let i = order; i < c.length; i++) {
-          const key = c.slice(i-order, i).join('');
-          if (!trans[key]) trans[key] = { T: 0, X: 0 };
-          if (c[i] === 'TAI') trans[key].T++; else trans[key].X++;
-        }
-        const curKey = c.slice(-order).join('');
-        const stats = trans[curKey];
-        if (!stats) continue;
-        const total = stats.T + stats.X;
-        if (total < 5) continue;
-        const pT = stats.T / total;
-        const conf = Math.abs(pT - 0.5) * 2;
-        if (conf > 0.15) return { pT: pT*100, pX: (1-pT)*100, conf, suggest: pT > 0.5 ? 'TAI' : 'XIU' };
-      }
-      return null;
-    }
-
-    secondOrderMarkov() {
-      const c = this.history; if (c.length < 30) return null;
-      const trans = {};
+    /* 20. Markov chuỗi bậc 2 */
+    markov2() {
+      const c = this.history;
+      if (c.length < 20) return null;
+      const last2 = c.slice(-2).join('');
+      let tHit = 0, xHit = 0;
       for (let i = 2; i < c.length; i++) {
-        const key = c.slice(i-2, i).join('');
-        if (!trans[key]) trans[key] = { T: 0, X: 0 };
-        if (c[i] === 'TAI') trans[key].T++; else trans[key].X++;
+        if (c.slice(i - 2, i).join('') === last2) {
+          if (c[i] === 'TAI') tHit++; else xHit++;
+        }
       }
-      const curKey = c.slice(-2).join('');
-      const stats = trans[curKey];
-      if (!stats || (stats.T + stats.X) < 5) return null;
-      const pT = stats.T / (stats.T + stats.X);
-      return { pT: pT*100, pX: (1-pT)*100, conf: Math.abs(pT - 0.5) * 2, suggest: pT > 0.5 ? 'TAI' : 'XIU' };
+      const total = tHit + xHit;
+      if (total < 4) return null;
+      const p = Math.max(tHit, xHit) / total;
+      return { confidence: p, suggest: tHit > xHit ? 'TAI' : 'XIU' };
     }
 
-    ensembleBayes() {
-      const c = this.history; if (c.length < 25) return null;
-      const last = c[c.length-1], opp = last === 'TAI' ? 'XIU' : 'TAI';
-      let cA = 0, cAB = 0, cAAB = 0, cAA = 0;
+    /* 21. Markov chuỗi bậc 3 */
+    markov3() {
+      const c = this.history;
+      if (c.length < 25) return null;
+      const last3 = c.slice(-3).join('');
+      let tHit = 0, xHit = 0;
+      for (let i = 3; i < c.length; i++) {
+        if (c.slice(i - 3, i).join('') === last3) {
+          if (c[i] === 'TAI') tHit++; else xHit++;
+        }
+      }
+      const total = tHit + xHit;
+      if (total < 3) return null;
+      const p = Math.max(tHit, xHit) / total;
+      return { confidence: p, suggest: tHit > xHit ? 'TAI' : 'XIU' };
+    }
+
+    /* 22. KNN so khớp chuỗi tương tự */
+    knn() {
+      const c = this.history;
+      const W = 6;
+      if (c.length < W + 15) return null;
+      const cur = c.slice(-W);
+      const matches = [];
+      for (let i = 0; i <= c.length - W - 1; i++) {
+        let same = 0;
+        for (let j = 0; j < W; j++) if (c[i + j] === cur[j]) same++;
+        if (same >= W - 1) matches.push({ sim: same, next: c[i + W] });
+      }
+      if (matches.length < 4) return null;
+      matches.sort((a, b) => b.sim - a.sim);
+      const top = matches.slice(0, 15);
+      let t = 0, x = 0;
+      for (const m of top) if (m.next === 'TAI') t++; else x++;
+      const p = Math.max(t, x) / top.length;
+      return { confidence: p, suggest: t > x ? 'TAI' : 'XIU' };
+    }
+
+    /* ============================================================
+       NHÓM 3: THỐNG KÊ / XÁC SUẤT (6 thuật toán)
+       ============================================================ */
+
+    /* 23. Bayesian đảo */
+    bayesian() {
+      const c = this.history;
+      if (c.length < 20) return null;
+      const last = c[c.length - 1];
+      const opp = last === 'TAI' ? 'XIU' : 'TAI';
+      let cA = 0, cAB = 0;
       for (let i = 0; i < c.length; i++) {
         if (c[i] === last) {
           cA++;
-          if (i >= 2 && c[i-1] === last) cAA++;
+          if (i > 0 && c[i - 1] === last && i < c.length) {} // no-op
         }
-        if (i > 0 && c[i-1] === last && c[i] === opp) cAB++;
-        if (i > 1 && c[i-2] === last && c[i-1] === last && c[i] === opp) cAAB++;
-      }
-      if (cA < 5) return null;
-      const p1 = cAB / cA;
-      const p2 = cAA > 3 ? cAAB / cAA : p1;
-      const pOpp = (p1 * 0.6 + p2 * 0.4);
-      if (Math.abs(pOpp - 0.5) < 0.1) return null;
-      return { conf: Math.abs(pOpp - 0.5) * 2, suggest: pOpp > 0.5 ? opp : last };
-    }
-
-    bayesian() {
-      const c = this.history; if (c.length < 20) return null;
-      const last = c[c.length-1], opposite = last === 'TAI' ? 'XIU' : 'TAI';
-      let cA = 0, cAB = 0;
-      for (let i = 0; i < c.length; i++) {
-        if (c[i] === last) cA++;
-        if (i > 0 && c[i-1] === last && c[i] === opposite) cAB++;
+        if (i > 0 && c[i - 1] === last && c[i] === opp) cAB++;
       }
       if (cA < 5) return null;
       const pOpp = cAB / cA;
-      return { pT: last === 'TAI' ? (1-pOpp)*100 : pOpp*100, pX: last === 'XIU' ? (1-pOpp)*100 : pOpp*100, conf: Math.abs(pOpp-0.5)*2, suggest: pOpp > 0.5 ? opposite : last };
+      const conf = Math.abs(pOpp - 0.5) * 2;
+      if (conf < 0.1) return null;
+      return { confidence: conf, suggest: pOpp > 0.5 ? opp : last };
     }
 
-    chiSquare() {
-      const c = this.history; if (c.length < 30) return null;
-      const win = c.slice(-30);
-      const tCount = win.filter(x => x === 'TAI').length;
-      const xCount = win.length - tCount;
-      const expected = win.length / 2;
-      const chi = Math.pow(tCount - expected, 2) / expected + Math.pow(xCount - expected, 2) / expected;
-      if (chi < 1.5) return null;
-      return { conf: Math.min(0.85, chi / 6), suggest: tCount > expected ? 'XIU' : 'TAI' };
-    }
-
-    monteCarlo() {
-      const c = this.history; if (c.length < 20) return null;
-      const samples = 200;
-      let tWins = 0;
-      const win = c.slice(-15);
-      for (let s = 0; s < samples; s++) {
-        let simT = 0, simX = 0;
-        for (let i = 0; i < win.length; i++) {
-          const idx = Math.floor(Math.random() * win.length);
-          if (win[idx] === 'TAI') simT++; else simX++;
-        }
-        if (simT > simX) tWins++;
-      }
-      const pT = tWins / samples;
-      if (Math.abs(pT - 0.5) < 0.08) return null;
-      return { pT: pT*100, pX: (1-pT)*100, conf: Math.abs(pT - 0.5) * 2, suggest: pT > 0.5 ? 'TAI' : 'XIU' };
-    }
-
-    entropy() {
-      const c = this.history; if (c.length < 20) return null;
-      const win = c.slice(-20);
-      let t = 0, x = 0;
-      for (const v of win) { if (v === 'TAI') t++; else x++; }
-      const pT = t/win.length, pX = x/win.length;
-      let H = 0;
-      if (pT > 0) H -= pT * Math.log2(pT);
-      if (pX > 0) H -= pX * Math.log2(pX);
-      return { conf: 1-H, suggest: pT > pX ? 'TAI' : 'XIU' };
-    }
-
-    streakReversal() {
-      const c = this.history; if (c.length < 10) return null;
-      let streak = 1;
-      for (let i = c.length-1; i > 0; i--) { if (c[i] === c[i-1]) streak++; else break; }
-      if (streak < 3) return null;
-      let reverses = 0, total = 0;
-      for (let i = streak; i < c.length; i++) {
-        let s = 1;
-        for (let j = i-1; j > 0; j--) { if (c[j] === c[j-1]) s++; else break; }
-        if (s >= streak) { total++; if (i < c.length && c[i] !== c[i-1]) reverses++; }
-      }
-      if (total < 3) return null;
-      const pR = reverses / total, opposite = c[c.length-1] === 'TAI' ? 'XIU' : 'TAI';
-      return { conf: pR, suggest: pR > 0.5 ? opposite : c[c.length-1] };
-    }
-
-    streakFollow() {
-      const c = this.history; if (c.length < 12) return null;
-      let streak = 1;
-      for (let i = c.length-1; i > 0; i--) { if (c[i] === c[i-1]) streak++; else break; }
-      if (streak < 2 || streak > 5) return null;
-      let followCount = 0, total = 0;
-      for (let i = streak; i < c.length - 1; i++) {
-        let s = 1;
-        for (let j = i-1; j > 0; j--) { if (c[j] === c[j-1]) s++; else break; }
-        if (s === streak) { total++; if (c[i] === c[i+1]) followCount++; }
-      }
-      if (total < 3) return null;
-      const pF = followCount / total;
-      return { conf: pF, suggest: pF > 0.5 ? c[c.length-1] : (c[c.length-1] === 'TAI' ? 'XIU' : 'TAI') };
-    }
-
-    volatility() {
-      const c = this.history; if (c.length < 25) return null;
-      const win = c.slice(-25);
-      let changes = 0;
-      for (let i = 1; i < win.length; i++) if (win[i] !== win[i-1]) changes++;
-      const ratio = changes / (win.length - 1);
-      const last = c[c.length-1], opposite = last === 'TAI' ? 'XIU' : 'TAI';
-      if (ratio > 0.65) return { suggest: last, conf: Math.min(0.75, ratio) };
-      if (ratio < 0.35) return { suggest: opposite, conf: Math.min(0.75, 1-ratio) };
+    /* 24. Xu hướng 15 phiên */
+    trend15() {
+      const c = this.history;
+      if (c.length < 15) return null;
+      const { tai, xiu } = this.countRecent(15);
+      const ratio = tai / 15;
+      if (ratio > 0.6) return { confidence: 0.62, suggest: 'XIU' };
+      if (ratio < 0.4) return { confidence: 0.62, suggest: 'TAI' };
       return null;
     }
 
-    clusterLong() {
-      const c = this.history; if (c.length < 30) return null;
+    /* 25. Xu hướng 30 phiên */
+    trend30() {
+      const c = this.history;
+      if (c.length < 30) return null;
+      const { tai } = this.countRecent(30);
+      const ratio = tai / 30;
+      if (ratio > 0.62) return { confidence: 0.65, suggest: 'XIU' };
+      if (ratio < 0.38) return { confidence: 0.65, suggest: 'TAI' };
+      return null;
+    }
+
+    /* 26. Fibonacci — tỉ lệ vàng */
+    fibo() {
+      const c = this.history;
+      if (c.length < 20) return null;
+      const { tai } = this.countRecent(20);
+      const ratio = tai / 20;
+      if (ratio > 0.618) return { confidence: 0.7, suggest: 'XIU' };
+      if (ratio < 0.382) return { confidence: 0.7, suggest: 'TAI' };
+      return null;
+    }
+
+    /* 27. Entropy — độ hỗn loạn */
+    entropy() {
+      const c = this.history;
+      if (c.length < 20) return null;
+      const { tai, xiu, total } = this.countRecent(20);
+      const pT = tai / total, pX = xiu / total;
+      let H = 0;
+      if (pT > 0) H -= pT * Math.log2(pT);
+      if (pX > 0) H -= pX * Math.log2(pX);
+      // H cao → hỗn loạn → theo cầu đảo
+      if (H > 0.95) return null;
+      return { confidence: 1 - H, suggest: pT > pX ? 'TAI' : 'XIU' };
+    }
+
+    /* 28. Adaptive variance */
+    adaptive() {
+      const c = this.history;
+      if (c.length < 20) return null;
+      const win = c.slice(-20);
+      const { tai } = this.countRecent(20);
+      const ratio = tai / 20;
+      let variance = 0;
+      for (const v of win) variance += Math.pow((v === 'TAI' ? 1 : 0) - ratio, 2);
+      variance /= win.length;
+      if (variance < 0.15) return null;
+      return { confidence: Math.min(0.85, variance * 2), suggest: ratio > 0.5 ? 'XIU' : 'TAI' };
+    }
+
+    /* ============================================================
+       NHÓM 4: MOMENTUM / SMOOTHING (5 thuật toán)
+       ============================================================ */
+
+    /* 29. Momentum có trọng số */
+    momentum() {
+      const c = this.history;
+      if (c.length < 15) return null;
+      let sT = 0, sX = 0;
+      for (let i = Math.max(0, c.length - 15); i < c.length; i++) {
+        const w = Math.exp(-(c.length - 1 - i) / 5);
+        if (c[i] === 'TAI') sT += w; else sX += w;
+      }
+      const total = sT + sX;
+      if (total < 1) return null;
+      const pT = sT / total;
+      const conf = Math.abs(pT - 0.5) * 2;
+      if (conf < 0.08) return null;
+      return { confidence: conf, suggest: pT > 0.5 ? 'TAI' : 'XIU' };
+    }
+
+    /* 30. Weighted Moving Average 12 */
+    wma12() {
+      const c = this.history;
+      if (c.length < 12) return null;
+      let sT = 0, wSum = 0;
+      for (let i = 0; i < 12; i++) {
+        const w = i + 1;
+        wSum += w;
+        if (c[c.length - 12 + i] === 'TAI') sT += w;
+      }
+      const pT = sT / wSum;
+      const conf = Math.abs(pT - 0.5) * 2;
+      if (conf < 0.1) return null;
+      return { confidence: conf, suggest: pT > 0.5 ? 'TAI' : 'XIU' };
+    }
+
+    /* 31. EMA 12 */
+    ema12() {
+      const c = this.history;
+      if (c.length < 12) return null;
+      const alpha = 0.3;
+      let ema = c[0] === 'TAI' ? 1 : 0;
+      for (let i = 1; i < c.length; i++) {
+        const v = c[i] === 'TAI' ? 1 : 0;
+        ema = alpha * v + (1 - alpha) * ema;
+      }
+      const conf = Math.abs(ema - 0.5) * 2;
+      if (conf < 0.1) return null;
+      return { confidence: conf, suggest: ema > 0.5 ? 'TAI' : 'XIU' };
+    }
+
+    /* 32. Neural-like sigmoid */
+    neural() {
+      const c = this.history;
+      if (c.length < 15) return null;
+      const W = 10;
+      const weights = [0.4, 0.6, 0.9, 1.2, 1.5, 1.2, 0.9, 0.6, 0.4, 0.3];
+      let s = 0;
+      for (let i = 0; i < W; i++) {
+        const v = c[c.length - W + i] === 'TAI' ? 1 : -1;
+        s += v * weights[i];
+      }
+      const sig = 1 / (1 + Math.exp(-s));
+      const conf = Math.abs(sig - 0.5) * 2;
+      if (conf < 0.1) return null;
+      return { confidence: conf, suggest: sig > 0.5 ? 'TAI' : 'XIU' };
+    }
+
+    /* 33. Recurrent sequence */
+    recurrent() {
+      const c = this.history;
+      if (c.length < 20) return null;
+      const W = 8;
+      const cur = c.slice(-W);
+      let sT = 0, sX = 0, total = 0;
+      for (let i = 0; i <= c.length - W - 1; i++) {
+        let sim = 0;
+        for (let j = 0; j < W; j++) if (c[i + j] === cur[j]) sim++;
+        if (sim < W - 2) continue;
+        const weight = Math.pow(2, sim - (W - 2));
+        if (c[i + W] === 'TAI') sT += weight; else sX += weight;
+        total++;
+      }
+      if (total < 3 || sT + sX < 1) return null;
+      const pT = sT / (sT + sX);
+      const conf = Math.abs(pT - 0.5) * 2;
+      if (conf < 0.1) return null;
+      return { confidence: conf, suggest: pT > 0.5 ? 'TAI' : 'XIU' };
+    }
+
+    /* ============================================================
+       NHÓM 5: VOLATILITY / CLUSTER (3 thuật toán)
+       ============================================================ */
+
+    /* 34. Volatility — độ biến động */
+    volatility() {
+      const c = this.history;
+      if (c.length < 25) return null;
+      const win = c.slice(-25);
+      let changes = 0;
+      for (let i = 1; i < win.length; i++) if (win[i] !== win[i - 1]) changes++;
+      const ratio = changes / (win.length - 1);
+      const last = c[c.length - 1];
+      const opp = last === 'TAI' ? 'XIU' : 'TAI';
+      if (ratio > 0.7) return { confidence: Math.min(0.75, ratio), suggest: last };
+      if (ratio < 0.3) return { confidence: Math.min(0.75, 1 - ratio), suggest: opp };
+      return null;
+    }
+
+    /* 35. Cluster — chuỗi dài bất thường */
+    cluster() {
+      const c = this.history;
+      if (c.length < 30) return null;
       const win = c.slice(-30);
       const groups = groupRuns(win);
       if (groups.length < 5) return null;
       const avgRun = win.length / groups.length;
-      const lastGroup = groups[groups.length-1];
-      if (lastGroup.n >= avgRun * 2.5) {
-        const opposite = lastGroup.k === 'TAI' ? 'XIU' : 'TAI';
-        return { conf: 0.7, suggest: opposite };
+      const lastG = groups[groups.length - 1];
+      if (lastG.n >= avgRun * 2.5) {
+        return { confidence: 0.72, suggest: lastG.k === 'TAI' ? 'XIU' : 'TAI' };
       }
       return null;
     }
 
-    momentum() {
-      const c = this.history; if (c.length < 15) return null;
-      const win = c.slice(-15);
-      let sT = 0, sX = 0;
-      for (let i = 0; i < win.length; i++) {
-        const w = Math.exp(-(win.length-1-i)/5);
-        if (win[i] === 'TAI') sT += w; else sX += w;
-      }
-      const total = sT + sX; if (total < 1) return null;
-      const pT = sT / total;
-      return { pT: pT*100, pX: (1-pT)*100, conf: Math.abs(pT-0.5)*2, suggest: pT > 0.5 ? 'TAI' : 'XIU' };
-    }
-
+    /* 36. Zigzag */
     zigzag() {
-      const c = this.history; if (c.length < 12) return null;
+      const c = this.history;
+      if (c.length < 12) return null;
       const win = c.slice(-12);
       let zig = 0, zag = 0;
       for (let i = 1; i < win.length; i++) {
-        if (win[i] !== win[i-1]) { if (win[i-1] === 'TAI') zig++; else zag++; }
+        if (win[i] !== win[i - 1]) {
+          if (win[i - 1] === 'TAI') zig++; else zag++;
+        }
       }
-      if (zig >= 3 || zag >= 3) {
-        const last = c[c.length-1];
-        return { conf: 0.65, suggest: last === 'TAI' ? 'XIU' : 'TAI' };
+      if (zig >= 4 || zag >= 4) {
+        return { confidence: 0.68, suggest: c[c.length - 1] === 'TAI' ? 'XIU' : 'TAI' };
       }
-      return null;
-    }
-
-    diceSum() {
-      const totals = this.totals.filter(t => t != null);
-      if (totals.length < 20) return null;
-      const recent = totals.slice(-20);
-      const avg = recent.reduce((a,b) => a+b, 0) / recent.length;
-      const deviation = avg - 10.5;
-      if (avg > 12) return { avg, deviation, conf: Math.min(0.8, Math.abs(deviation) / 4), suggest: 'XIU' };
-      if (avg < 9) return { avg, deviation, conf: Math.min(0.8, Math.abs(deviation) / 4), suggest: 'TAI' };
-      return null;
-    }
-
-    knn() {
-      const c = this.history; const W = 6;
-      if (c.length < W + 20) return null;
-      const cur = c.slice(-W);
-      const matches = [];
-      for (let i = 0; i < c.length - W - 1; i++) {
-        let same = 0;
-        for (let j = 0; j < W; j++) if (c[i+j] === cur[j]) same++;
-        if (same >= W - 1) matches.push({ dist: W - same, next: c[i+W] });
-      }
-      if (matches.length < 5) return null;
-      matches.sort((a,b) => a.dist - b.dist);
-      const top = matches.slice(0, 12);
-      let t = 0, x = 0;
-      for (const m of top) { if (m.next === 'TAI') t++; else x++; }
-      return { conf: Math.max(t,x)/top.length, suggest: t > x ? 'TAI' : 'XIU' };
-    }
-
-    fiboLevel() {
-      const c = this.history; if (c.length < 20) return null;
-      const win = c.slice(-20);
-      let tCount = win.filter(x => x === 'TAI').length;
-      const ratio = tCount / win.length;
-      if (ratio > 0.618) return { conf: 0.7, suggest: 'XIU' };
-      if (ratio < 0.382) return { conf: 0.7, suggest: 'TAI' };
       return null;
     }
 
     /* ============================================================
-       PREDICT — ENSEMBLE 34 THUẬT TOÁN
+       ENSEMBLE — TỔNG HỢP 36 THUẬT TOÁN
        ============================================================ */
     predict() {
       const algos = [
-        /* BÁM CẦU — trọng số cao nhất (weight 2.5-3.0) */
-        { w: 3.0, r: this.bamCauBet()      },
-        { w: 2.8, r: this.bamCau11()       },
-        { w: 2.9, r: this.bamCau22()       },
-        { w: 2.9, r: this.bamCau33()       },
-        { w: 2.7, r: this.cauNghieng()     },
-        { w: 2.6, r: this.cauDao()         },
-        { w: 2.7, r: this.cauSoLe()        },
-        { w: 2.8, r: this.cauBe()          },
-        { w: 2.7, r: this.cauGay()         },
-        { w: 3.0, r: this.bamBetDai()      },
-        /* Pattern/Sequence */
-        { w: 2.2, r: this.patternMatch()   },
-        { w: 2.4, r: this.deepPattern()    },
-        { w: 2.1, r: this.sequenceRNN()    },
-        { w: 1.9, r: this.recurrentPattern() },
-        { w: 2.3, r: this.neuralLike()     },
-        /* MA/Smoothing */
-        { w: 1.5, r: this.weightedMA()     },
-        { w: 1.6, r: this.exponentialMA()  },
-        { w: 1.3, r: this.adaptiveThreshold() },
-        /* Markov/Bayes */
-        { w: 2.0, r: this.markovChain()    },
-        { w: 1.9, r: this.secondOrderMarkov() },
-        { w: 1.8, r: this.ensembleBayes()  },
-        /* Statistic */
-        { w: 1.6, r: this.bayesian()       },
-        { w: 1.4, r: this.chiSquare()      },
-        { w: 1.7, r: this.monteCarlo()     },
-        { w: 1.0, r: this.entropy()        },
-        /* Streak/Volatility */
-        { w: 1.9, r: this.streakReversal() },
-        { w: 1.7, r: this.streakFollow()   },
-        { w: 1.5, r: this.volatility()     },
-        { w: 1.8, r: this.clusterLong()    },
+        /* BÁM CẦU — trọng số cao */
+        { name: 'cauBet',      w: 3.2, r: this.cauBet() },
+        { name: 'cau11',       w: 3.0, r: this.cau11() },
+        { name: 'cau22',       w: 3.1, r: this.cau22() },
+        { name: 'cau33',       w: 3.1, r: this.cau33() },
+        { name: 'cau44',       w: 2.9, r: this.cau44() },
+        { name: 'cauNghieng',  w: 2.7, r: this.cauNghieng() },
+        { name: 'cauBe',       w: 3.0, r: this.cauBe() },
+        { name: 'cauGay',      w: 2.8, r: this.cauGay() },
+        { name: 'cauDao',      w: 2.8, r: this.cauDao() },
+        { name: 'cauSoLe',     w: 2.8, r: this.cauSoLe() },
+        { name: 'bamBetDai',   w: 3.2, r: this.bamBetDai() },
+        { name: 'cau321',      w: 2.6, r: this.cau321() },
+        { name: 'cauDoiXung',  w: 2.7, r: this.cauDoiXung() },
+        { name: 'cauDauCuoi',  w: 2.7, r: this.cauDauCuoi() },
+        /* Pattern Matching */
+        { name: 'nGramMatch',  w: 3.3, r: this.nGramMatch() },
+        { name: 'nGram3',      w: 2.8, r: this.nGram3() },
+        { name: 'nGram5',      w: 3.0, r: this.nGram5() },
+        { name: 'nGram8',      w: 3.1, r: this.nGram8() },
+        { name: 'markov1',     w: 2.6, r: this.markov1() },
+        { name: 'markov2',     w: 2.9, r: this.markov2() },
+        { name: 'markov3',     w: 2.9, r: this.markov3() },
+        { name: 'knn',         w: 2.8, r: this.knn() },
+        /* Thống kê */
+        { name: 'bayesian',    w: 2.0, r: this.bayesian() },
+        { name: 'trend15',     w: 1.7, r: this.trend15() },
+        { name: 'trend30',     w: 1.6, r: this.trend30() },
+        { name: 'fibo',        w: 1.5, r: this.fibo() },
+        { name: 'entropy',     w: 1.2, r: this.entropy() },
+        { name: 'adaptive',    w: 1.5, r: this.adaptive() },
         /* Momentum */
-        { w: 1.6, r: this.momentum()       },
-        { w: 1.5, r: this.zigzag()         },
-        { w: 1.4, r: this.diceSum()        },
-        /* Fallback */
-        { w: 1.9, r: this.knn()            },
-        { w: 1.5, r: this.fiboLevel()      }
+        { name: 'momentum',    w: 1.9, r: this.momentum() },
+        { name: 'wma12',       w: 1.7, r: this.wma12() },
+        { name: 'ema12',       w: 1.8, r: this.ema12() },
+        { name: 'neural',      w: 2.1, r: this.neural() },
+        { name: 'recurrent',   w: 2.4, r: this.recurrent() },
+        /* Volatility */
+        { name: 'volatility',  w: 1.6, r: this.volatility() },
+        { name: 'cluster',     w: 2.0, r: this.cluster() },
+        { name: 'zigzag',      w: 1.8, r: this.zigzag() }
       ];
 
       let sT = 0, sX = 0, tW = 0, used = 0;
+      let tCount = 0, xCount = 0;
+
       for (const a of algos) {
-        if (!a.r) continue;
-        const conf = Math.min(1, a.r.conf || 0.5);
+        if (!a.r || !a.r.suggest) continue;
+        const conf = Math.min(1, a.r.confidence || 0.5);
         const w = a.w * conf;
-        if (a.r.suggest === 'TAI') sT += w; else sX += w;
+        if (a.r.suggest === 'TAI') { sT += w; tCount++; }
+        else { sX += w; xCount++; }
         tW += w;
         used++;
       }
 
-      if (tW < 1 || used < 2) return { g: null, conf: 0 };
+      if (tW < 1 || used < 3) {
+        return { g: null, conf: 0, used: used };
+      }
 
       const total = sT + sX;
       let rawConf = Math.max(sT, sX) / total;
 
       /* Boost theo số thuật toán đồng thuận */
-      if (used < 5)       rawConf *= 0.78;
-      else if (used < 10) rawConf *= 0.90;
-      else if (used < 18) rawConf *= 1.0;
-      else if (used < 25) rawConf *= 1.08;
-      else                rawConf *= Math.min(1.20, 1 + (used - 25) * 0.012);
+      const agreement = Math.max(tCount, xCount) / used;
+      if (used < 5)       rawConf *= 0.75;
+      else if (used < 10) rawConf *= 0.88;
+      else if (used < 15) rawConf *= 0.95;
+      else if (used < 22) rawConf *= 1.02;
+      else if (used < 28) rawConf *= 1.08;
+      else                rawConf *= Math.min(1.18, 1 + (used - 28) * 0.008);
+
+      /* Agreement bonus */
+      rawConf = rawConf * (0.7 + agreement * 0.3);
 
       /* Phân loại 3 tầng */
       let conf = Math.round(rawConf * 100);
@@ -697,7 +850,11 @@ const TEEngine = (() => {
         const t = sT; sT = sX; sX = t;
       }
 
-      return { g: sT > sX ? 'TAI' : 'XIU', conf, used };
+      return {
+        g: sT > sX ? 'TAI' : 'XIU',
+        conf: conf,
+        used: used
+      };
     }
   }
 
