@@ -1,5 +1,5 @@
 /* ============================================================
-   TOOL MINHIOS — auth.js (REBUILD with safety timers)
+   AUTH.JS — V5 + KEY CHECK AFTER LOGIN
    ============================================================ */
 function _$(id) { return document.getElementById(id); }
 
@@ -12,29 +12,9 @@ function _setLoading(spinId, btnTextId, text, load) {
 function _setError(m)    { var b = _$('loginError'); if (b) b.textContent = m || ''; }
 function _setKeyError(m) { var b = _$('keyErr');     if (b) b.textContent = m || ''; }
 
-/* Biến bảo hiểm: tránh xung đột khi user bấm login nhiều lần */
 var _loginBusy = false;
 var _regBusy   = false;
 
-/* ---------- IP ---------- */
-var _cachedIP = null;
-function getIP() {
-  if (_cachedIP) return Promise.resolve(_cachedIP);
-  return new Promise(function (res) {
-    var x = new XMLHttpRequest();
-    x.open('GET', 'https://api.ipify.org?format=json', true);
-    x.timeout = 3000;
-    x.onload  = function () {
-      try { var d = JSON.parse(x.responseText); if (d.ip) { _cachedIP = d.ip; return res(d.ip); } }
-      catch (e) {}
-      res('unknown');
-    };
-    x.onerror = x.ontimeout = function () { res('unknown'); };
-    x.send();
-  });
-}
-
-/* ---------- TAB ---------- */
 function switchTab(tab) {
   _setError('');
   var tl = _$('tabLogin'), tr = _$('tabReg');
@@ -52,7 +32,6 @@ function switchTab(tab) {
   }
 }
 
-/* ---------- HELPERS ---------- */
 function _loginBtnIdle() {
   _setLoading('loginSpinner', 'btnLoginText',
     '<i class="fa-solid fa-right-to-bracket"></i> ĐĂNG NHẬP', false);
@@ -66,22 +45,21 @@ function _regBtnIdle() {
 function doRegister() {
   if (_regBusy) return;
   _setError('');
-
   var name  = (_$('regName')  ? _$('regName').value  : '').trim();
   var email = (_$('regEmail') ? _$('regEmail').value : '').trim().toLowerCase();
   var p1    = _$('regPass')   ? _$('regPass').value  : '';
   var p2    = _$('regPass2')  ? _$('regPass2').value : '';
 
   if (!name || !email || !p1 || !p2) return _setError('Vui lòng nhập đầy đủ!');
-  if (p1.length < 6)                 return _setError('Mật khẩu từ 6 ký tự!');
-  if (p1 !== p2)                     return _setError('Mật khẩu không khớp!');
+  if (p1.length < 6) return _setError('Mật khẩu từ 6 ký tự!');
+  if (p1 !== p2) return _setError('Mật khẩu không khớp!');
 
   _regBusy = true;
   _setLoading('regSpinner', 'btnRegText', 'ĐANG XỬ LÝ...', true);
 
   var safety = setTimeout(function () {
     if (!_regBusy) return;
-    _setError('Server không phản hồi. Thử lại sau!');
+    _setError('Server không phản hồi.');
     _regBtnIdle();
     _regBusy = false;
   }, 14000);
@@ -112,7 +90,6 @@ function doRegister() {
 function doLogin() {
   if (_loginBusy) return;
   _setError('');
-
   var email = (_$('loginEmail') ? _$('loginEmail').value : '').trim().toLowerCase();
   var pass  = _$('loginPass')   ? _$('loginPass').value  : '';
 
@@ -123,7 +100,7 @@ function doLogin() {
 
   var safety = setTimeout(function () {
     if (!_loginBusy) return;
-    _setError('Server không phản hồi (quá 14s). Kiểm tra /api/index.php?action=ping');
+    _setError('Server không phản hồi (quá 14s).');
     _loginBtnIdle();
     _loginBusy = false;
   }, 14000);
@@ -137,6 +114,9 @@ function doLogin() {
         try {
           if (typeof enterApp === 'function') enterApp();
           else _setError('Lỗi: app.js chưa load');
+          setTimeout(function () {
+            if (typeof checkKeyAndNotify === 'function') checkKeyAndNotify();
+          }, 800);
         } catch (e) {
           _setError('Lỗi khởi tạo: ' + (e.message || e));
         }
@@ -152,6 +132,38 @@ function doLogin() {
       _loginBtnIdle();
       _loginBusy = false;
     });
+}
+
+/* ---------- KEY CHECK AFTER LOGIN ---------- */
+function checkKeyAndNotify() {
+  var s = getSession();
+  if (!s || !s.user) return;
+  var u = s.user;
+  var isAdmin = (u.email === ADMIN_EMAIL) || (u.is_admin == 1);
+  if (isAdmin) return;
+
+  var exp = Number(u.key_expiry) || 0;
+  if (!exp || exp <= Date.now()) {
+    setTimeout(function () {
+      var go = confirm(
+        '🔒 KEY ĐÃ HẾT HẠN\n\n' +
+        'Bạn không thể mở tool khi chưa kích hoạt key.\n\n' +
+        '👉 OK = MUA KEY NGAY\n' +
+        '👉 Cancel = NẠP TIỀN TRƯỚC'
+      );
+      if (go) showPage('vip');
+      else showPage('deposit');
+    }, 500);
+  } else {
+    var remain = exp - Date.now();
+    if (remain < 86400000 && remain > 0) {
+      setTimeout(function () {
+        var h = Math.floor(remain / 3600000);
+        var m = Math.floor((remain % 3600000) / 60000);
+        alert('⚠️ KEY SẮP HẾT HẠN!\n\nCòn lại: ' + h + ' giờ ' + m + ' phút\n\nGia hạn ngay!');
+      }, 700);
+    }
+  }
 }
 
 /* ---------- LOGOUT ---------- */
@@ -178,6 +190,8 @@ function activateKey() {
         if (typeof closeModal === 'function') closeModal('keyModal');
         apiGetUser().then(function () {
           if (typeof renderAll === 'function') renderAll();
+          if (typeof updateVipBanner === 'function') updateVipBanner();
+          if (typeof buildPorts === 'function') buildPorts();
         });
       } else {
         _setKeyError((data && data.error) || 'Key không hợp lệ!');
@@ -200,8 +214,7 @@ function submitDeposit() {
   if (!s) return alert('Vui lòng đăng nhập lại!');
 
   api('deposit_create', {
-    email: s.email, password: s.password,
-    amount: amount, note: note
+    email: s.email, password: s.password, amount: amount, note: note
   }).then(function (data) {
     if (data && data.success) {
       alert(data.message || 'Đã gửi yêu cầu nạp!');
@@ -215,11 +228,10 @@ function submitDeposit() {
   });
 }
 
-/* ---------- EXPORTS ---------- */
-window.getIP          = getIP;
-window.switchTab      = switchTab;
-window.doRegister     = doRegister;
-window.doLogin        = doLogin;
-window.doLogout       = doLogout;
-window.activateKey    = activateKey;
-window.submitDeposit  = submitDeposit;
+window.switchTab = switchTab;
+window.doRegister = doRegister;
+window.doLogin = doLogin;
+window.doLogout = doLogout;
+window.activateKey = activateKey;
+window.submitDeposit = submitDeposit;
+window.checkKeyAndNotify = checkKeyAndNotify;
