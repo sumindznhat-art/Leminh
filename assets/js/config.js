@@ -1,12 +1,12 @@
 /* ============================================================
-   CONFIG.JS — FULL 22 GAMES + API
+   CONFIG.JS — FULL 22 GAMES + API V5
    ============================================================ */
 
 window.CONFIG = {
     site_name: "TOOL TAI XIU MINHIOS",
-    site_desc: "He Thong AI Phan Tich Du Lieu The He Moi",
-    marquee: "He Thong AI Phan Tich Du Lieu The He Moi - Nang cap VIP de mo full tool",
-    footer: "TOOL MINHIOS 2026",
+    site_desc: "He Thong AI Phan Tich Tai xiu ",
+    marquee: "He Thong Phan Tich Du Lieu  ",
+    footer: "TOOL MINHIOS ",
     support_link: "",
     API_BASE: "/api",
     API_TIMEOUT: 15000,
