@@ -9,8 +9,7 @@ function input() {
 }
 function nowMs() { return round(microtime(true) * 1000); }
 function getIP() {
-    if (!empty($_SERVER['HTTP_X_FORWARDED_FOR']))
-        return trim(explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])[0]);
+    if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) return trim(explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])[0]);
     return $_SERVER['REMOTE_ADDR'] ?? 'unknown';
 }
 function auth() {
@@ -26,28 +25,20 @@ function auth() {
 }
 function adminOnly() {
     $u = auth();
-    if ($u['email'] !== strtolower(ADMIN_EMAIL) && !$u['is_admin'])
-        out(['error' => 'Không có quyền'], 403);
+    if ($u['email'] !== strtolower(ADMIN_EMAIL) && !$u['is_admin']) out(['error' => 'Không có quyền'], 403);
     return $u;
 }
 function genKey() {
     $C = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    $g = function() use ($C) {
-        $s = '';
-        for ($i = 0; $i < 4; $i++) $s .= $C[random_int(0, strlen($C) - 1)];
-        return $s;
-    };
-    return $g() . '-' . $g() . '-' . $g();
+    $g = function() use ($C) { $s = ''; for ($i = 0; $i < 4; $i++) $s .= $C[random_int(0, strlen($C) - 1)]; return $s; };
+    return $g().'-'.$g().'-'.$g();
 }
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 $in = input();
 
 switch ($action) {
-    case 'ping':
-        out(['success' => true, 'message' => 'API OK', 'time' => nowMs()]);
-        break;
-
+    case 'ping': out(['success' => true, 'message' => 'API OK', 'time' => nowMs()]); break;
     case 'config_get':
         try {
             $s = db()->prepare('SELECT v FROM config WHERE k = ?');
@@ -56,17 +47,14 @@ switch ($action) {
             out(['success' => true, 'config' => $row ? json_decode($row['v'], true) : null]);
         } catch (Exception $e) { out(['success' => true, 'config' => null]); }
         break;
-
     case 'config_save':
         adminOnly();
         $cfg = $in['config'] ?? null;
         if (!$cfg) out(['error' => 'Config không hợp lệ']);
         $json = json_encode($cfg, JSON_UNESCAPED_UNICODE);
-        db()->prepare('INSERT INTO config (k, v) VALUES (?, ?) ON DUPLICATE KEY UPDATE v = ?')
-            ->execute(['main', $json, $json]);
+        db()->prepare('INSERT INTO config (k, v) VALUES (?, ?) ON DUPLICATE KEY UPDATE v = ?')->execute(['main', $json, $json]);
         out(['success' => true]);
         break;
-
     case 'register': {
         $em = strtolower(trim($in['email'] ?? ''));
         $pw = $in['password'] ?? '';
@@ -81,7 +69,6 @@ switch ($action) {
             ->execute([$em, $pw, $nm, getIP(), nowMs(), nowMs()]);
         out(['success' => true]);
     }
-
     case 'login': {
         $em = strtolower(trim($in['email'] ?? ''));
         $pw = $in['password'] ?? '';
@@ -100,20 +87,17 @@ switch ($action) {
             db()->prepare('UPDATE users SET is_admin = 1 WHERE email = ?')->execute([$em]);
             $u['is_admin'] = 1;
         }
-        db()->prepare('UPDATE users SET ip = ?, last_login = ? WHERE email = ?')
-            ->execute([getIP(), nowMs(), $em]);
+        db()->prepare('UPDATE users SET ip = ?, last_login = ? WHERE email = ?')->execute([getIP(), nowMs(), $em]);
         $u['ip'] = getIP();
         $u['last_login'] = nowMs();
         unset($u['password']);
         out(['success' => true, 'user' => $u]);
     }
-
     case 'get_user':
         $u = auth();
         unset($u['password']);
         out(['success' => true, 'user' => $u]);
         break;
-
     case 'deposit_create': {
         $u = auth();
         $amount = intval($in['amount'] ?? 0);
@@ -124,13 +108,11 @@ switch ($action) {
             ->execute([$id, $u['email'], $amount, 'pending', $note, getIP(), nowMs()]);
         out(['success' => true, 'id' => $id, 'message' => 'Đã gửi yêu cầu nạp']);
     }
-
     case 'deposit_pending':
         adminOnly();
         $s = db()->query("SELECT d.*, u.name AS user_name FROM deposits d LEFT JOIN users u ON d.email=u.email WHERE d.status='pending' ORDER BY d.created_at DESC");
         out(['success' => true, 'deposits' => $s->fetchAll()]);
         break;
-
     case 'deposit_approve': {
         adminOnly();
         $id = $in['id'] ?? '';
@@ -149,31 +131,22 @@ switch ($action) {
             $pdo->prepare('UPDATE users SET balance = ? WHERE email = ?')->execute([$newBal, $d['email']]);
             $pdo->prepare('INSERT INTO history (email, type, amount, balance, note, at) VALUES (?, ?, ?, ?, ?, ?)')
                 ->execute([$d['email'], 'deposit', $d['amount'], $newBal, 'Nạp tiền', nowMs()]);
-            $pdo->prepare('UPDATE deposits SET status=?, approved_at=? WHERE id=?')
-                ->execute(['approved', nowMs(), $id]);
+            $pdo->prepare('UPDATE deposits SET status=?, approved_at=? WHERE id=?')->execute(['approved', nowMs(), $id]);
             $pdo->commit();
             out(['success' => true, 'new_balance' => $newBal]);
-        } catch (Exception $e) {
-            $pdo->rollBack();
-            out(['error' => $e->getMessage()], 500);
-        }
+        } catch (Exception $e) { $pdo->rollBack(); out(['error' => $e->getMessage()], 500); }
     }
-
     case 'deposit_reject':
         adminOnly();
-        $id = $in['id'] ?? '';
-        $reason = $in['reason'] ?? 'Không hợp lệ';
         db()->prepare('UPDATE deposits SET status=?, rejected_at=?, note=? WHERE id=?')
-            ->execute(['rejected', nowMs(), $reason, $id]);
+            ->execute(['rejected', nowMs(), $in['reason'] ?? 'Không hợp lệ', $in['id'] ?? '']);
         out(['success' => true]);
         break;
-
     case 'user_list':
         adminOnly();
         $s = db()->query('SELECT id, email, name, balance, key_expiry, is_admin, ip, last_login, created_at FROM users ORDER BY is_admin DESC, last_login DESC');
         out(['success' => true, 'users' => $s->fetchAll()]);
         break;
-
     case 'admin_set_balance': {
         adminOnly();
         $target = strtolower(trim($in['target_email'] ?? ''));
@@ -190,14 +163,11 @@ switch ($action) {
             ->execute([$target, 'admin', $delta, $newBal, 'Admin cấp tiền', nowMs()]);
         out(['success' => true, 'new_balance' => $newBal]);
     }
-
     case 'user_reset_ip':
         adminOnly();
-        $target = strtolower(trim($in['target_email'] ?? ''));
-        db()->prepare('UPDATE users SET ip = ? WHERE email = ?')->execute(['', $target]);
+        db()->prepare('UPDATE users SET ip = ? WHERE email = ?')->execute(['', strtolower(trim($in['target_email'] ?? ''))]);
         out(['success' => true]);
         break;
-
     case 'user_delete':
         adminOnly();
         $target = strtolower(trim($in['target_email'] ?? ''));
@@ -205,7 +175,6 @@ switch ($action) {
         db()->prepare('DELETE FROM users WHERE email = ?')->execute([$target]);
         out(['success' => true]);
         break;
-
     case 'key_create': {
         adminOnly();
         $days = max(1, intval($in['days'] ?? 1));
@@ -213,13 +182,11 @@ switch ($action) {
         $created = [];
         for ($i = 0; $i < $qty; $i++) {
             $code = genKey();
-            db()->prepare('INSERT INTO `keys` (code, days, created_at) VALUES (?, ?, ?)')
-                ->execute([$code, $days, nowMs()]);
+            db()->prepare('INSERT INTO `keys` (code, days, created_at) VALUES (?, ?, ?)')->execute([$code, $days, nowMs()]);
             $created[] = $code;
         }
         out(['success' => true, 'keys' => $created]);
     }
-
     case 'key_activate': {
         $u = auth();
         $code = strtoupper(trim($in['code'] ?? ''));
@@ -234,33 +201,27 @@ switch ($action) {
         $pdo = db();
         $pdo->beginTransaction();
         $pdo->prepare('UPDATE users SET key_expiry = ? WHERE email = ?')->execute([$newExp, $u['email']]);
-        $pdo->prepare('UPDATE `keys` SET used=1, used_by=?, used_at=? WHERE code=?')
-            ->execute([$u['email'], nowMs(), $code]);
-        $pdo->prepare('INSERT INTO history (email, type, amount, balance, note, at) VALUES (?, ?, 0, ?, ?, ?)')
-            ->execute([$u['email'], 'key', $u['balance'], 'Key +' . $k['days'] . 'd', nowMs()]);
+        $pdo->prepare('UPDATE `keys` SET used=1, used_by=?, used_at=? WHERE code=?')->execute([$u['email'], nowMs(), $code]);
+        $pdo->prepare('INSERT INTO history (email, type, amount, balance, note, at) VALUES (?, ?, 0, ?, ?, ?)')->execute([$u['email'], 'key', $u['balance'], 'Key +' . $k['days'] . 'd', nowMs()]);
         $pdo->commit();
         out(['success' => true, 'days' => $k['days'], 'new_expiry' => $newExp]);
     }
-
     case 'key_list':
         adminOnly();
         $s = db()->query('SELECT * FROM `keys` ORDER BY created_at DESC LIMIT 200');
         out(['success' => true, 'keys' => $s->fetchAll()]);
         break;
-
     case 'key_delete':
         adminOnly();
         db()->prepare('DELETE FROM `keys` WHERE code = ?')->execute([$in['code'] ?? '']);
         out(['success' => true]);
         break;
-
     case 'history':
         $u = auth();
         $s = db()->prepare('SELECT * FROM history WHERE email = ? ORDER BY at DESC LIMIT 100');
         $s->execute([$u['email']]);
         out(['success' => true, 'history' => $s->fetchAll()]);
         break;
-
     case 'buy_package': {
         $u = auth();
         $days = intval($in['days'] ?? 0);
@@ -272,23 +233,15 @@ switch ($action) {
         $newBal = $u['balance'] - $price;
         $pdo = db();
         $pdo->beginTransaction();
-        $pdo->prepare('UPDATE users SET balance=?, key_expiry=? WHERE email=?')
-            ->execute([$newBal, $newExp, $u['email']]);
-        $pdo->prepare('INSERT INTO history (email, type, amount, balance, note, at) VALUES (?, ?, ?, ?, ?, ?)')
-            ->execute([$u['email'], 'buy', -$price, $newBal, 'Mua VIP ' . $days . 'd', nowMs()]);
+        $pdo->prepare('UPDATE users SET balance=?, key_expiry=? WHERE email=?')->execute([$newBal, $newExp, $u['email']]);
+        $pdo->prepare('INSERT INTO history (email, type, amount, balance, note, at) VALUES (?, ?, ?, ?, ?, ?)')->execute([$u['email'], 'buy', -$price, $newBal, 'Mua VIP ' . $days . 'd', nowMs()]);
         $pdo->commit();
         out(['success' => true, 'new_balance' => $newBal]);
     }
-
     case 'update_last_api':
         $u = auth();
-        try {
-            db()->prepare('UPDATE users SET ip=?, last_login=? WHERE email=?')
-                ->execute([getIP(), nowMs(), $u['email']]);
-        } catch (Exception $e) {}
         out(['success' => true]);
         break;
-
     default:
         out(['error' => 'Action không hợp lệ', 'received' => $action], 400);
 }
