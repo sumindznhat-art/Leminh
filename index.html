@@ -23,7 +23,7 @@ html,body{height:100%;overflow:hidden;font-family:'Inter',sans-serif;color:#f3f4
 .login-online-dot{position:absolute;bottom:4px;right:4px;width:18px;height:18px;background:var(--green);border:3px solid #141620;border-radius:50%;z-index:3;box-shadow:0 0 12px rgba(34,197,94,.6)}
 .auth-tabs{display:flex;gap:4px;margin-bottom:18px;background:#0a0b0f;padding:4px;border-radius:12px}
 .auth-tab{flex:1;padding:11px;border-radius:9px;background:transparent;color:var(--sub);font-size:12px;font-weight:700;cursor:pointer;border:none}
-.auth-tab.active{background:linear-gradient(135deg,#ff3d71,#e11d5c);color:#fff;box-shadow:0 4px 16px rgba(255,61,113,.4)}
+.auth-tab.active{background:linear-gradient(135deg,#ff3d71,#e11d5c);color:#fff}
 .login-input-group{position:relative;margin-bottom:10px}
 .login-input-group .icon-left{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px;z-index:2}
 .login-input-group:focus-within .icon-left{color:var(--pink)}
@@ -76,17 +76,8 @@ var API_BASE = "https://toolkiemlua2026.site/api";
 function $(id){return document.getElementById(id)}
 function setErr(m){var e=$('loginError');if(e)e.textContent=m||''}
 function setOk(m){var e=$('successMsg');if(e)e.textContent=m||''}
-function setLoad(spin,btn,txt,load){
-  var s=$(spin),b=$(btn);
-  if(s)s.style.display=load?'inline-block':'none';
-  if(b)b.innerHTML=txt;
-}
-function switchTab(tab){
-  setErr('');setOk('');
-  var tl=$('tabLogin'),tr=$('tabReg'),fl=$('formLogin'),fr=$('formReg');
-  if(tab==='login'){tl.classList.add('active');tr.classList.remove('active');fl.style.display='';fr.style.display='none'}
-  else{tr.classList.add('active');tl.classList.remove('active');fr.style.display='';fl.style.display='none'}
-}
+function setLoad(spin,btn,txt,load){var s=$(spin),b=$(btn);if(s)s.style.display=load?'inline-block':'none';if(b)b.innerHTML=txt}
+function switchTab(tab){setErr('');setOk('');var tl=$('tabLogin'),tr=$('tabReg'),fl=$('formLogin'),fr=$('formReg');if(tab==='login'){tl.classList.add('active');tr.classList.remove('active');fl.style.display='';fr.style.display='none'}else{tr.classList.add('active');tl.classList.remove('active');fr.style.display='';fl.style.display='none'}}
 function apiCall(action,params){
   return new Promise(function(resolve){
     var xhr=new XMLHttpRequest();var done=false;
@@ -95,11 +86,7 @@ function apiCall(action,params){
       xhr.open('POST',API_BASE+'/index.php?action='+encodeURIComponent(action),true);
       xhr.setRequestHeader('Content-Type','application/json');
       xhr.timeout=15000;
-      xhr.onload=function(){
-        var t=xhr.responseText||'';
-        if(!t)return fin({success:false,error:'Server không phản hồi'});
-        try{fin(JSON.parse(t))}catch(e){fin({success:false,error:'Lỗi: '+t.substring(0,150)})}
-      };
+      xhr.onload=function(){var t=xhr.responseText||'';if(!t)return fin({success:false,error:'Server không phản hồi'});try{fin(JSON.parse(t))}catch(e){fin({success:false,error:'Lỗi: '+t.substring(0,150)})}};
       xhr.onerror=function(){fin({success:false,error:'Không kết nối server'})};
       xhr.ontimeout=function(){fin({success:false,error:'Timeout'})};
       xhr.send(JSON.stringify(params||{}));
@@ -108,49 +95,35 @@ function apiCall(action,params){
 }
 var _busy=false;
 function doLogin(){
-  if(_busy)return;
-  setErr('');setOk('');
+  if(_busy)return;setErr('');setOk('');
   var email=($('loginEmail').value||'').trim().toLowerCase();
   var pass=$('loginPass').value||'';
   if(!email||!pass)return setErr('Nhập đầy đủ!');
-  _busy=true;
-  setLoad('loginSpinner','btnLoginText','ĐANG ĐĂNG NHẬP...',true);
+  _busy=true;setLoad('loginSpinner','btnLoginText','ĐANG ĐĂNG NHẬP...',true);
   apiCall('login',{email:email,password:pass}).then(function(r){
     if(r&&r.success&&r.user){
       try{localStorage.setItem('bonsicola_session',JSON.stringify({email:email,password:pass,user:r.user}))}catch(e){}
       setOk('ĐĂNG NHẬP OK! Đang chuyển...');
       setTimeout(function(){location.href='app.html'},700);
     } else setErr((r&&r.error)||'Sai tài khoản!');
-  }).then(function(){
-    _busy=false;
-    setLoad('loginSpinner','btnLoginText','<i class="fa-solid fa-right-to-bracket"></i> ĐĂNG NHẬP',false);
-  });
+  }).then(function(){_busy=false;setLoad('loginSpinner','btnLoginText','<i class="fa-solid fa-right-to-bracket"></i> ĐĂNG NHẬP',false)});
 }
 var _rbusy=false;
 function doRegister(){
-  if(_rbusy)return;
-  setErr('');setOk('');
+  if(_rbusy)return;setErr('');setOk('');
   var name=($('regName').value||'').trim();
   var email=($('regEmail').value||'').trim().toLowerCase();
-  var p1=$('regPass').value||'';
-  var p2=$('regPass2').value||'';
+  var p1=$('regPass').value||'';var p2=$('regPass2').value||'';
   if(!name||!email||!p1||!p2)return setErr('Nhập đầy đủ!');
   if(p1.length<6)return setErr('Pass từ 6 ký tự!');
   if(p1!==p2)return setErr('Pass không khớp!');
-  _rbusy=true;
-  setLoad('regSpinner','btnRegText','ĐANG XỬ LÝ...',true);
+  _rbusy=true;setLoad('regSpinner','btnRegText','ĐANG XỬ LÝ...',true);
   apiCall('register',{name:name,email:email,password:p1}).then(function(r){
     if(r&&r.success){setOk('ĐĂNG KÝ OK! Đăng nhập ngay.');switchTab('login');$('loginEmail').value=email}
     else setErr((r&&r.error)||'Đăng ký lỗi!');
-  }).then(function(){
-    _rbusy=false;
-    setLoad('regSpinner','btnRegText','<i class="fa-solid fa-user-plus"></i> ĐĂNG KÝ',false);
-  });
+  }).then(function(){_rbusy=false;setLoad('regSpinner','btnRegText','<i class="fa-solid fa-user-plus"></i> ĐĂNG KÝ',false)});
 }
-apiCall('ping',{}).then(function(r){
-  if(r&&r.success)$('subText').textContent='API OK · Sẵn sàng';
-  else $('subText').textContent='⚠️ API: '+((r&&r.error)||'lỗi');
-});
+apiCall('ping',{}).then(function(r){if(r&&r.success)$('subText').textContent='API OK · Sẵn sàng';else $('subText').textContent='⚠️ API: '+((r&&r.error)||'lỗi')});
 </script>
 </body>
 </html>
