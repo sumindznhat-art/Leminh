@@ -1,8 +1,8 @@
 <?php
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'keclyxbd_bonsicola');
-define('DB_USER', 'keclyxbd_admin');
-define('DB_PASS', 'Leminh@123456');
+define('DB_NAME', 'toolkiemmhok_bonsicola');
+define('DB_USER', 'toolkiemmhok_admin');
+define('DB_PASS', 'dRsU&kQ$4b1JR!ru');
 
 define('ADMIN_EMAIL', 'leminhdz@gmail.com');
 define('ADMIN_PASS', 'admin123');
@@ -25,12 +25,20 @@ function db() {
     static $pdo = null;
     if ($pdo) return $pdo;
     try {
-        $pdo = new PDO('mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8mb4', DB_USER, DB_PASS,
-            [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
+        $pdo = new PDO(
+            'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8mb4',
+            DB_USER, DB_PASS,
+            [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]
+        );
         return $pdo;
     } catch (PDOException $e) {
         out(['error' => 'DB: ' . $e->getMessage(), 'code' => $e->getCode()], 500);
     }
 }
-function out($data, $code = 200) { http_response_code($code); echo json_encode($data, JSON_UNESCAPED_UNICODE); exit; }
+function out($data, $code = 200) {
+    http_response_code($code);
+    echo json_encode($data, JSON_UNESCAPED_UNICODE);
+    exit;
+}
 ?>
