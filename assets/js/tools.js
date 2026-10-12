@@ -1,23 +1,24 @@
 /* ============================================================
-   TOOLS.JS — V5 FULL API · KHÔNG LỖI · 12+ FORMAT
+   TOOLS.JS — V7 · HEADER GỌN · KẾT QUẢ Ở ROBOT · MD5 TOOL
    ============================================================ */
-var activeTool = null, toolInterval = null, toolRetry = 0;
-var _engine = null, _lastSid = null, _lastGy = null, _im = false;
 
-/* ---------- STATUS ---------- */
-function setStatus(state, text) {
+var activeTool = null, toolInterval = null, toolRetry = 0;
+var _engine = null, _lastSid = null, _im = false;
+
+/* ============ STATUS HEADER (CHỈ ĐÈN XANH) ============ */
+function setStatus(state) {
   var el = document.getElementById('gsStatus');
   var txt = document.getElementById('gsStatusText');
-  if (!el || !txt) return;
+  if (txt) txt.textContent = '';
+  if (!el) return;
   el.classList.remove('err', 'wait');
-  if (state === 'err')  el.classList.add('err');
+  if (state === 'err') el.classList.add('err');
   else if (state === 'wait') el.classList.add('wait');
-  txt.textContent = text;
 }
 
-/* ---------- ROBOT DISPLAY ---------- */
+/* ============ ROBOT DISPLAY ============ */
 function updateRobot(sid, prediction, confidence) {
-  var pEl    = document.getElementById('phien-text');
+  var pEl = document.getElementById('phien-text');
   var predEl = document.getElementById('prediction-text');
   var confEl = document.getElementById('confidence-text');
 
@@ -38,14 +39,17 @@ function updateRobot(sid, prediction, confidence) {
       predEl.style.textShadow = '0 2px 24px rgba(0,0,0,.95)';
     }
   }
+
   if (confEl) {
     confEl.textContent = 'Tỉ lệ: ' + (confidence != null ? confidence : '--') + '%';
-    confEl.style.color = confidence >= 80 ? '#22c55e' : (confidence >= 60 ? '#fbbf24' : '#ffd700');
+    if (confidence >= 80) confEl.style.color = '#22c55e';
+    else if (confidence >= 60) confEl.style.color = '#fbbf24';
+    else confEl.style.color = '#ffd700';
   }
 }
 function resetRobot() { updateRobot(null, null, null); }
 
-/* ---------- OPEN TOOL (CHẶN KHI KEY HẾT HẠN) ---------- */
+/* ============ OPEN TOOL ============ */
 function openTool(slugOrId) {
   var ports = (window.CONFIG && window.CONFIG.ports) || [];
   var tool = ports.filter(function(x) {
@@ -61,36 +65,46 @@ function openTool(slugOrId) {
   var u = s.user || {};
   var isAdmin = (u.email === ADMIN_EMAIL) || (u.is_admin == 1);
 
-  /* KIỂM TRA KEY HẾT HẠN */
-  if (!isAdmin) {
-    var exp = Number(u.key_expiry) || 0;
-    if (!exp || exp <= Date.now()) {
-      var choice = confirm(
-        '🔒 KEY ĐÃ HẾT HẠN\n\n' +
-        '━━━━━━━━━━━━━━━━━━━━\n' +
-        'Cần kích hoạt key VIP để sử dụng tool.\n\n' +
-        '💰 Số dư: ' + fmt(u.balance || 0) + '\n' +
-        '━━━━━━━━━━━━━━━━━━━━\n\n' +
-        '👉 OK để MUA KEY\n' +
-        '👉 Cancel để NẠP TIỀN'
-      );
-      if (choice) showPage('vip');
-      else showPage('deposit');
-      return;
-    }
+  if (!isAdmin && isKeyExpired()) {
+    var goBuy = confirm(
+      '🔒 KEY ĐÃ HẾT HẠN\n\n' +
+      'Cần kích hoạt key VIP để sử dụng tool.\n\n' +
+      '💰 Số dư: ' + fmt(u.balance || 0) + '\n\n' +
+      '👉 OK = MUA KEY\n' +
+      '👉 Cancel = NẠP TIỀN'
+    );
+    if (goBuy) showPage('vip');
+    else showPage('deposit');
+    return;
   }
 
   activeTool = tool;
-  _engine = new TEEngine.Yq();
-  _lastSid = null; _lastGy = null; _im = false;
+  _lastSid = null;
+  _im = false;
   toolRetry = 0;
 
   var gsName = document.getElementById('gsName');
   if (gsName) gsName.textContent = tool.name;
   var gsLogo = document.getElementById('gsLogo');
-  if (gsLogo) gsLogo.src = getToolImage(tool) || '';
+  if (gsLogo) gsLogo.src = (tool.image || '');
 
-  setStatus('wait', 'Đang kết nối');
+  setStatus('wait');
+
+  /* ===== TOOL MD5 — HIỆN PANEL NHẬP MD5 ===== */
+  if (tool.kind === 'md5' || tool.cat === 'md5') {
+    if (typeof showMD5Panel === 'function') showMD5Panel(tool.name, tool.image);
+    var scrMD5 = document.getElementById('game-screen');
+    if (scrMD5) scrMD5.classList.add('show');
+    setStatus('ok');
+    return;
+  } else {
+    if (typeof hideMD5Panel === 'function') hideMD5Panel();
+  }
+
+  /* ===== TOOL THƯỜNG — HIỆN IFRAME GAME ===== */
+  if (tool.api_url) {
+    _engine = new TEEngine.Yq();
+  }
 
   var frame = document.getElementById('gameFrame');
   if (frame) {
@@ -106,10 +120,6 @@ function openTool(slugOrId) {
   var screen = document.getElementById('game-screen');
   if (screen) screen.classList.add('show');
 
-  if (tool.api_url && typeof apiUpdateLastApi === 'function') {
-    apiUpdateLastApi(tool.api_url, tool.name).catch(function () {});
-  }
-
   if (toolInterval) { clearInterval(toolInterval); toolInterval = null; }
   resetRobot();
 
@@ -117,7 +127,7 @@ function openTool(slugOrId) {
     tickApi();
     toolInterval = setInterval(tickApi, 4000);
   } else {
-    setStatus('ok', 'OK');
+    setStatus('ok');
   }
 }
 
@@ -126,21 +136,20 @@ function closeGame() {
   if (screen) screen.classList.remove('show');
   var frame = document.getElementById('gameFrame');
   if (frame) { frame.src = 'about:blank'; frame.style.display = 'block'; }
+  if (typeof hideMD5Panel === 'function') hideMD5Panel();
   if (toolInterval) { clearInterval(toolInterval); toolInterval = null; }
   activeTool = null;
 }
 
-/* ---------- EXTRACT LIST ---------- */
+/* ============ EXTRACT LIST ============ */
 function extractList(data) {
   if (!data) return null;
   if (Array.isArray(data)) return data;
-
-  var direct = ['list','sessions','history','items','soicau','results','result','data','records','rows','arr','content'];
+  var direct = ['list','sessions','history','items','soicau','results','result','data','records','rows','arr','content','game'];
   for (var i = 0; i < direct.length; i++) {
     var v = data[direct[i]];
     if (Array.isArray(v) && v.length) return v;
   }
-
   if (data.data && typeof data.data === 'object' && !Array.isArray(data.data)) {
     for (var k in data.data) {
       if (Array.isArray(data.data[k]) && data.data[k].length) return data.data[k];
@@ -154,29 +163,27 @@ function extractList(data) {
   return null;
 }
 
-/* ---------- NORMALIZE ITEM ---------- */
+/* ============ NORMALIZE ITEM ============ */
 function normalizeItem(it, idx) {
   if (!it || typeof it !== 'object') return null;
-  var id = Number(it.id || it.sid || it.session || it.issue || it.ky || it.period || 0);
-  var result = it.resultTruyenThong || it.result || it.ketQua || it.outcome || it.value || it.kq;
+  var id = Number(it.id || it.sid || it.session || it.issue || it.ky || it.period || it.Phien || 0);
+  var result = it.resultTruyenThong || it.result || it.ketQua || it.outcome || it.value || it.kq || it.KetQua;
   if (typeof result === 'string') {
     var up = result.toUpperCase();
-    if (up === 'TAI' || up === 'TÀI' || up === 'T') result = 'TAI';
-    else if (up === 'XIU' || up === 'XỈU' || up === 'X') result = 'XIU';
+    if (up === 'TAI' || up === 'TÀI' || up === 'T' || up === 'BIG') result = 'TAI';
+    else if (up === 'XIU' || up === 'XỈU' || up === 'X' || up === 'SMALL') result = 'XIU';
     else result = null;
   } else if (result === 1 || result === '1') result = 'TAI';
   else if (result === 0 || result === '0') result = 'XIU';
   else result = null;
-
   if (!result) return null;
   if (!id || id <= 0) id = idx + 1;
   return { id: id, result: result, raw: it };
 }
 
-/* ---------- TICK API (retry) ---------- */
+/* ============ TICK API ============ */
 function tickApi() {
   if (!activeTool || !activeTool.api_url) return;
-
   var ctrl = new AbortController();
   var timer = setTimeout(function () { ctrl.abort(); }, 9000);
 
@@ -196,13 +203,12 @@ function tickApi() {
         var n = normalizeItem(list[i], i);
         if (n) norm.push(n);
       }
-      if (!norm.length) throw new Error('Không có kết quả hợp lệ');
+      if (!norm.length) throw new Error('Không có kết quả');
 
       norm.sort(function (a, b) { return a.id - b.id; });
       var latest = norm[norm.length - 1];
       var nid = latest.id;
-
-      setStatus('ok', 'OK');
+      setStatus('ok');
       var displaySid = nid + 1;
 
       if (_lastSid !== null && nid !== _lastSid) {
@@ -222,36 +228,32 @@ function tickApi() {
       clearTimeout(timer);
       toolRetry++;
       if (toolRetry <= 2) {
-        setStatus('wait', 'Đang thử lại...');
+        setStatus('wait');
         setTimeout(tickApi, 1500);
       } else {
-        setStatus('err', 'Lỗi API — ' + (e.message || 'timeout'));
+        setStatus('err');
       }
     });
 }
 
-/* ---------- ANALYZE ---------- */
+/* ============ ANALYZE ============ */
 function analyze(asc, displaySid) {
   try {
-    var historyForEngine = asc.map(function (x) { return x.raw; });
-    _engine.load(historyForEngine);
-
+    var hist = asc.map(function (x) { return x.raw; });
+    _engine.load(hist);
     var qs = TEEngine.predict(_engine);
     if (qs && qs.g) {
       updateRobot(displaySid, qs.g, qs.conf);
-      setStatus('ok', 'Sẵn sàng ' + qs.conf + '% · ' + (qs.used || 0) + ' thuật toán');
-      _lastGy = qs.g;
     } else {
       updateRobot(displaySid, null, null);
-      setStatus('ok', 'Chờ dữ liệu...');
-      _lastGy = null;
     }
+    setStatus('ok');
   } catch (e) {
     console.error('[analyze]', e);
   }
 }
 
-/* ---------- DRAG ROBOT ---------- */
+/* ============ DRAG ROBOT ============ */
 (function () {
   function init() {
     var el = document.getElementById('robot');
@@ -262,16 +264,14 @@ function analyze(asc, displaySid) {
         var pos = JSON.parse(saved);
         if (pos && pos.left) {
           el.style.left = pos.left;
-          el.style.top  = pos.top;
+          el.style.top = pos.top;
           el.style.bottom = 'auto';
-          el.style.right  = 'auto';
+          el.style.right = 'auto';
         }
       }
     } catch (_) {}
-
     var dragging = false, moved = false;
     var startX = 0, startY = 0, origX = 0, origY = 0;
-
     el.addEventListener('pointerdown', function (e) {
       if (e.target.closest('#box-content')) return;
       dragging = true; moved = false;
@@ -284,10 +284,10 @@ function analyze(asc, displaySid) {
       if (!dragging) return;
       var dx = e.clientX - startX, dy = e.clientY - startY;
       if (Math.abs(dx) > 3 || Math.abs(dy) > 3) moved = true;
-      el.style.left   = (origX + dx) + 'px';
-      el.style.top    = (origY + dy) + 'px';
+      el.style.left = (origX + dx) + 'px';
+      el.style.top = (origY + dy) + 'px';
       el.style.bottom = 'auto';
-      el.style.right  = 'auto';
+      el.style.right = 'auto';
     });
     function stop() {
       if (dragging && moved) {
@@ -306,5 +306,5 @@ function analyze(asc, displaySid) {
   else init();
 })();
 
-window.openTool  = openTool;
+window.openTool = openTool;
 window.closeGame = closeGame;
