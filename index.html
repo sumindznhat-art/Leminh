@@ -10,10 +10,13 @@
 </head>
 <body>
 
+<audio id="bgMusic" loop preload="none"></audio>
+
+<!-- LOGIN -->
 <div id="login-screen">
   <div class="login-box">
-    <h1 class="login-title">TOOL TÀI XỈU BONIOS</h1>
-    <p class="login-sub"><i class="fa-solid fa-shield-halved"></i> <span id="subText">Đang kiểm tra...</span></p>
+    <h1 class="login-title" id="loginSiteName">TOOL TÀI XỈU BONIOS</h1>
+    <p class="login-sub"><i class="fa-solid fa-shield-halved"></i> <span id="subText">Đăng nhập hệ thống</span></p>
     <div class="login-avatar">
       <div class="login-avatar-ring"></div>
       <img id="loginAvatarImg" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><rect fill='%230f1115' width='200' height='200'/><text x='50%25' y='56%25' font-size='90' text-anchor='middle' dominant-baseline='middle'>🎀</text></svg>">
@@ -24,24 +27,199 @@
       <button class="auth-tab" id="tabReg" onclick="switchTab('reg')">ĐĂNG KÝ</button>
     </div>
     <div id="formLogin">
-      <div class="login-input-group"><i class="fa-solid fa-envelope icon-left"></i><input type="email" id="loginEmail" placeholder="Email..."></div>
-      <div class="login-input-group"><i class="fa-solid fa-lock icon-left"></i><input type="password" id="loginPass" placeholder="Mật khẩu..."></div>
-      <button class="login-btn" onclick="doLogin()"><span class="login-spinner" id="loginSpinner"></span><span id="btnLoginText"><i class="fa-solid fa-right-to-bracket"></i> ĐĂNG NHẬP</span></button>
+      <div class="login-input-group"><i class="fa-solid fa-envelope icon-left"></i><input type="email" id="loginEmail" placeholder="Email..." autocomplete="off"></div>
+      <div class="login-input-group"><i class="fa-solid fa-lock icon-left"></i><input type="password" id="loginPass" placeholder="Mật khẩu..." autocomplete="off"></div>
+      <button class="login-btn" id="btnLogin" onclick="doLogin()"><span class="login-spinner" id="loginSpinner"></span><span id="btnLoginText"><i class="fa-solid fa-right-to-bracket"></i> ĐĂNG NHẬP</span></button>
     </div>
     <div id="formReg" style="display:none">
       <div class="login-input-group"><i class="fa-solid fa-user icon-left"></i><input type="text" id="regName" placeholder="Tên hiển thị..."></div>
       <div class="login-input-group"><i class="fa-solid fa-envelope icon-left"></i><input type="email" id="regEmail" placeholder="Email..."></div>
       <div class="login-input-group"><i class="fa-solid fa-lock icon-left"></i><input type="password" id="regPass" placeholder="Mật khẩu..."></div>
       <div class="login-input-group"><i class="fa-solid fa-lock icon-left"></i><input type="password" id="regPass2" placeholder="Nhập lại mật khẩu..."></div>
-      <button class="login-btn" onclick="doRegister()"><span class="login-spinner" id="regSpinner"></span><span id="btnRegText"><i class="fa-solid fa-user-plus"></i> ĐĂNG KÝ</span></button>
+      <button class="login-btn" id="btnReg" onclick="doRegister()"><span class="login-spinner" id="regSpinner"></span><span id="btnRegText"><i class="fa-solid fa-user-plus"></i> ĐĂNG KÝ</span></button>
     </div>
     <div class="login-error" id="loginError"></div>
-    <div class="login-success" id="successMsg"></div>
     <p class="login-footer">© TOOL • BONIOS 2026</p>
   </div>
 </div>
 
+<!-- APP -->
+<div id="app" style="display:none">
+  <div class="app-header">
+    <div class="user-info" onclick="openDrawer()">
+      <div class="user-ava"><img id="hdrAvatar" src=""></div>
+      <div class="user-txt">
+        <div class="user-name" id="hdrName">User</div>
+        <div class="user-coin"><i class="fa-solid fa-coins"></i> <span id="hdrCoin">0</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-content" id="appContent">
+    <div class="page active" id="page-home">
+      <div class="hero-card">
+        <div class="hero-left-border"></div>
+        <div class="hero-content">
+          <div class="hero-title">API <span class="pink">GAME</span></div>
+          <div class="hero-sub">// TÍCH HỢP DỄ DÀNG • TỐC ĐỘ CAO</div>
+          <button class="hero-btn" onclick="showPage('tools')"><i class="fa-solid fa-bolt"></i> XEM NGAY</button>
+        </div>
+        <div class="hero-code">
+          <div class="code-line">model: <span class="code-val">"bonios•"</span>,</div>
+          <div class="code-line">algorithms: <span class="code-yellow">36</span>,</div>
+          <div class="code-line">games: <span class="code-yellow">22</span>,</div>
+          <div class="code-line">status: <span class="code-green">"active"</span></div>
+          <div class="code-status"><span class="dot-green"></span> 64.•</div>
+        </div>
+      </div>
+      <div class="cat-tabs-wrap"><div class="cat-tabs" id="catTabs"></div></div>
+      <div class="autobot-banner">
+        <div class="ab-tag"><span class="dot-green-sm"></span> MỚI • AUTO CƯỢC TRỰC TIẾP TRÊN WEB</div>
+        <div class="ab-title">GAME AUTO</div>
+        <div class="ab-desc">Đăng nhập tài khoản game • TRẢI NGHIỆM TOOLVIP</div>
+        <div class="ab-btns">
+          <button class="ab-btn pink" onclick="openTool('md5-tool')">MD5 TOOL</button>
+          <button class="ab-btn outline" onclick="openTool('lc79-tx')">TÀI XỈU HŨ</button>
+        </div>
+      </div>
+      <div id="toolList"></div>
+      <div style="height:20px"></div>
+      <div class="app-footer">
+        <div>TOOL TÀI XỈU MINHIOS © 2026</div>
+        <div>HỆ THỐNG AI PHÂN TÍCH DỮ LIỆU THẾ HỆ MỚI</div>
+        <div class="footer-link">HỖ TRỢ / CSKH</div>
+      </div>
+    </div>
+
+    <div class="page" id="page-tools">
+      <div class="cat-tabs-wrap" style="margin-top:20px"><div class="cat-tabs" id="catTabs2"></div></div>
+      <div id="toolList2"></div>
+    </div>
+
+    <div class="page" id="page-deposit">
+      <div class="dep-hero"><h2>NẠP TIỀN</h2><p>Quét QR hoặc chuyển khoản</p></div>
+      <div class="balance-box"><div class="bb-label">Số dư hiện tại</div><div class="bb-value" id="depBalance">0đ</div><div class="bb-sub" id="depStatus">Chưa có key</div></div>
+      <div id="bankInfo"></div>
+      <div class="sec-title">THAO TÁC</div>
+      <div class="action-card" onclick="openDepositModal()"><div class="ac-icon"><i class="fa-solid fa-paper-plane"></i></div><div class="ac-info"><div class="ac-name">Gửi yêu cầu nạp tiền</div><div class="ac-desc">Admin duyệt trong 24h</div></div><i class="fa-solid fa-chevron-right ac-arrow"></i></div>
+      <div class="action-card" onclick="openHistoryDeposit()"><div class="ac-icon green"><i class="fa-solid fa-clock-rotate-left"></i></div><div class="ac-info"><div class="ac-name">Lịch sử nạp tiền</div><div class="ac-desc">Xem yêu cầu đã gửi</div></div><i class="fa-solid fa-chevron-right ac-arrow"></i></div>
+    </div>
+
+    <div class="page" id="page-vip">
+      <div class="vip-hero"><h2><i class="fa-solid fa-crown"></i> MUA VIP</h2><p>Nạp tiền để mua key</p></div>
+      <div class="balance-box"><div class="bb-label">Số dư khả dụng</div><div class="bb-value" id="vipBalance">0đ</div><div class="bb-sub" id="vipExpiry">Chưa kích hoạt</div></div>
+      <div id="pkgList"></div>
+    </div>
+
+    <div class="page" id="page-profile">
+      <div class="profile-box">
+        <div class="prof-ava-wrap"><img id="profAvatar" src=""><div class="prof-cam" onclick="openAvatarModal()"><i class="fa-solid fa-camera"></i></div></div>
+        <div class="prof-name" id="profName">User</div>
+        <div class="prof-role" id="profRole">THÀNH VIÊN</div>
+      </div>
+      <div class="info-card"><span>Số dư</span><b id="profBalance">0đ</b></div>
+      <div class="info-card"><span>Thời hạn Key</span><b id="profKeyStatus" style="color:#22c55e">—</b></div>
+      <div class="info-card"><span>Tham gia</span><b id="profJoined">—</b></div>
+      <div class="info-card"><span>Đăng nhập mới</span><b id="profLastLogin">—</b></div>
+      <div class="info-card"><span>IP thiết bị</span><b id="profIP">—</b></div>
+      <button class="big-btn blue" onclick="openKeyModal()"><i class="fa-solid fa-key"></i> NHẬP KEY</button>
+      <button class="big-btn red" onclick="doLogout()"><i class="fa-solid fa-right-from-bracket"></i> ĐĂNG XUẤT</button>
+      <div style="height:30px"></div>
+    </div>
+  </div>
+
+  <div class="bottom-nav">
+    <button class="nav-item active" data-page="home" onclick="showPage('home')"><i class="fa-solid fa-house"></i><span>TRANG CHỦ</span></button>
+    <button class="nav-item" data-page="vip" onclick="showPage('vip')"><i class="fa-solid fa-key"></i><span>MUA KEY</span></button>
+    <button class="nav-item" data-page="profile" onclick="showPage('profile')"><i class="fa-solid fa-user"></i><span>TÀI KHOẢN</span></button>
+    <button class="nav-item" data-page="deposit" onclick="showPage('deposit')"><i class="fa-solid fa-building-columns"></i><span>NẠP BANK</span></button>
+  </div>
+</div>
+
+<!-- DRAWER -->
+<div class="drawer-mask" id="drawerMask" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-head">
+    <div class="dh-avatar"><img id="drawerAvatar" src=""></div>
+    <div class="dh-info"><div class="dh-name" id="drawerName">User</div><div class="dh-email" id="drawerEmail">user@mail.com</div></div>
+  </div>
+  <div class="drawer-items">
+    <button class="di" onclick="openKeyModal()"><i class="fa-solid fa-key"></i> Nhập Key kích hoạt</button>
+    <button class="di" onclick="openHistoryDeposit()"><i class="fa-solid fa-wallet"></i> Lịch sử nạp tiền</button>
+    <button class="di" onclick="openHistoryKey()"><i class="fa-solid fa-key"></i> Lịch sử mua key</button>
+    <button class="di danger" onclick="doLogout()"><i class="fa-solid fa-right-from-bracket"></i> Đăng xuất</button>
+  </div>
+  <div class="drawer-foot">© TOOL • MINHIOS 2026</div>
+</div>
+
+<!-- GAME SCREEN + ROBOT -->
+<div id="game-screen">
+  <div class="gs-header">
+    <button class="gs-close" onclick="closeGame()"><i class="fa-solid fa-arrow-left"></i></button>
+    <div class="gs-title"><img id="gsLogo" src=""><span id="gsName">Tool</span></div>
+    <div class="gs-status" id="gsStatus"><span class="dot"></span> <span id="gsStatusText"></span></div>
+  </div>
+  <iframe id="gameFrame" src="about:blank" class="game-frame"></iframe>
+
+  <div id="md5Panel">
+    <div class="md5-wrap">
+      <div class="md5-title">🎲 DỰ ĐOÁN MD5</div>
+      <div class="md5-sub">Nhập MD5 phiên (32 ký tự hex)</div>
+      <input type="text" id="md5Input" placeholder="a1b2c3d4e5f6..." maxlength="32" autocomplete="off" oninput="this.value=this.value.toLowerCase().replace(/[^a-f0-9]/g,'')">
+      <button class="md5-btn" onclick="runMD5Predict()">🎲 PHÂN TÍCH MD5</button>
+      <div id="md5Loading">⏳ Đang phân tích 18 thuật toán...</div>
+      <div class="md5-split">
+        <div class="md5-box tai">🔵 TÀI<span id="md5TaiPercent">0%</span></div>
+        <div class="md5-box xiu">🔴 XỈU<span id="md5XiuPercent">0%</span></div>
+      </div>
+      <div id="md5Result" class="md5-result"></div>
+      <div class="md5-stats">📊 Số lần: <b id="md5Count">0</b> · 📈 Tỉ lệ: <b id="md5Winrate" class="green">0%</b></div>
+    </div>
+  </div>
+
+  <div id="robot">
+    <div id="box">
+      <img src="https://i.postimg.cc/j26ZMVPs/IMG-0481.gif" alt="Robot AI" draggable="false">
+      <div id="box-content">
+        <div id="row1"><span id="phien-text">#0:</span><span id="prediction-text">--</span></div>
+        <div id="confidence-text">Tỉ lệ: --%</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="overlay" id="avatarModal" onclick="if(event.target===this)closeModal('avatarModal')">
+  <div class="sheet" style="max-width:460px"><div class="sheet-grip"></div><h3>ĐỔI AVATAR</h3>
+  <textarea id="avBase64Input" placeholder="Dán Base64 ảnh hoặc URL"></textarea>
+  <div class="av-actions"><button class="av-btn av-save" onclick="saveAvatar()">LƯU</button><button class="av-btn av-reset" onclick="resetAvatar()">RESET</button></div>
+  <div class="av-status" id="avStatus"></div></div>
+</div>
+
+<div class="overlay" id="keyModal" onclick="if(event.target===this)closeModal('keyModal')">
+  <div class="sheet" style="max-width:420px"><div class="sheet-grip"></div><h3>NHẬP KEY KÍCH HOẠT</h3>
+  <input type="text" id="keyInput" class="key-input" placeholder="XXXX-XXXX-XXXX">
+  <div class="key-err" id="keyErr"></div>
+  <button class="adm-btn" onclick="activateKey()">KÍCH HOẠT</button></div>
+</div>
+
+<div class="overlay" id="depositModal" onclick="if(event.target===this)closeModal('depositModal')">
+  <div class="sheet" style="max-width:460px"><div class="sheet-grip"></div><h3>GỬI YÊU CẦU NẠP TIỀN</h3>
+  <input type="number" id="depAmount" class="adm-input" placeholder="Số tiền (VD: 50000)" min="10000">
+  <textarea id="depNote" class="adm-textarea" placeholder="Ghi chú..."></textarea>
+  <button class="adm-btn" onclick="submitDeposit()">GỬI YÊU CẦU</button></div>
+</div>
+
+<div class="overlay" id="historyModal" onclick="if(event.target===this)closeModal('historyModal')">
+  <div class="sheet" style="max-width:520px"><div class="sheet-grip"></div><h3 id="histTitle">LỊCH SỬ</h3><div id="histContent"></div></div>
+</div>
+
 <script src="assets/js/config.js"></script>
+<script src="assets/js/store.js"></script>
+<script src="assets/js/engine.js"></script>
 <script src="assets/js/auth.js"></script>
+<script src="assets/js/tools.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/security.js"></script>
 </body>
 </html>
