@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>TOOL TÀI XỈU MINHIOS</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<div id="app" style="display:flex">
+  <div class="app-header">
+    <div class="user-info" onclick="openDrawer()">
+      <div class="user-ava"><img id="hdrAvatar" src=""></div>
+      <div class="user-txt">
+        <div class="user-name" id="hdrName">User</div>
+        <div class="user-coin"><i class="fa-solid fa-coins"></i> <span id="hdrCoin">0đ</span></div>
+      </div>
+    </div>
+    <div class="key-countdown" id="keyCountdownBox" style="display:none">
+      <i class="fa-solid fa-hourglass-half"></i><span id="keyCountdown">--</span>
+    </div>
+  </div>
+
+  <div class="app-content" id="appContent">
+    <div class="page active" id="page-home">
+      <div class="hero-card">
+        <div class="hero-left-border"></div>
+        <div class="hero-content">
+          <div class="hero-title">API <span class="pink">GAME</span></div>
+          <div class="hero-sub">// THUẬT TOÁN API S1VN</div>
+        </div>
+        <div class="hero-code">
+          <div class="code-line">model: <span class="code-val">"leminh"</span>,</div>
+          <div class="code-line">algorithms: <span class="code-yellow">36</span>,</div>
+          <div class="code-line">games: <span class="code-yellow">22</span>,</div>
+          <div class="code-line">status: <span class="code-green">"active"</span></div>
+          <div class="code-status"><span class="dot-green"></span> 64•ONL</div>
+        </div>
+      </div>
+      <div class="cat-tabs-wrap"><div class="cat-tabs" id="catTabs"></div></div>
+      <div id="toolList"></div>
+      <div class="app-footer">
+        <div>TOOL TÀI XỈU BONIOS © 2026</div>
+        <div class="footer-link">HỖ TRỢ / CSKH</div>
+      </div>
+    </div>
+
+    <div class="page" id="page-deposit">
+      <div class="dep-hero"><h2>NẠP TIỀN</h2><p>Quét QR hoặc chuyển khoản</p></div>
+      <div class="balance-box"><div class="bb-label">Số dư hiện tại</div><div class="bb-value" id="depBalance">0đ</div><div class="bb-sub" id="depStatus">Chưa có key</div></div>
+      <div id="bankInfo"></div>
+      <div class="sec-title">THAO TÁC</div>
+      <div class="action-card" onclick="openDepositModal()"><div class="ac-icon"><i class="fa-solid fa-paper-plane"></i></div><div class="ac-info"><div class="ac-name">Gửi yêu cầu nạp tiền</div><div class="ac-desc">Admin duyệt trong 24h</div></div><i class="fa-solid fa-chevron-right ac-arrow"></i></div>
+    </div>
+
+    <div class="page" id="page-vip">
+      <div class="vip-hero"><h2><i class="fa-solid fa-crown"></i> MUA VIP</h2><p>Nạp tiền để mua key</p></div>
+      <div class="balance-box"><div class="bb-label">Số dư khả dụng</div><div class="bb-value" id="vipBalance">0đ</div><div class="bb-sub" id="vipExpiry">Chưa kích hoạt</div></div>
+      <div id="pkgList"></div>
+    </div>
+
+    <div class="page" id="page-profile">
+      <div class="profile-box">
+        <div class="prof-ava-wrap"><img id="profAvatar" src=""></div>
+        <div class="prof-name" id="profName">User</div>
+        <div class="prof-role" id="profRole">THÀNH VIÊN</div>
+      </div>
+      <div class="info-card"><span>Số dư</span><b id="profBalance">0đ</b></div>
+      <div class="info-card"><span>Thời hạn Key</span><b id="profKeyStatus" style="color:#22c55e">—</b></div>
+      <div class="info-card"><span>Tham gia</span><b id="profJoined">—</b></div>
+      <div class="info-card"><span>Đăng nhập mới</span><b id="profLastLogin">—</b></div>
+      <div class="info-card"><span>IP thiết bị</span><b id="profIP">—</b></div>
+      <button class="big-btn blue" onclick="openKeyModal()"><i class="fa-solid fa-key"></i> NHẬP KEY</button>
+      <button class="big-btn red" onclick="doLogout()"><i class="fa-solid fa-right-from-bracket"></i> ĐĂNG XUẤT</button>
+    </div>
+  </div>
+
+  <div class="bottom-nav">
+    <button class="nav-item active" data-page="home" onclick="showPage('home')"><i class="fa-solid fa-house"></i><span>TRANG CHỦ</span></button>
+    <button class="nav-item" data-page="vip" onclick="showPage('vip')"><i class="fa-solid fa-key"></i><span>MUA KEY</span></button>
+    <button class="nav-item" data-page="profile" onclick="showPage('profile')"><i class="fa-solid fa-user"></i><span>TÀI KHOẢN</span></button>
+    <button class="nav-item" data-page="deposit" onclick="showPage('deposit')"><i class="fa-solid fa-building-columns"></i><span>NẠP BANK</span></button>
+  </div>
+</div>
+
+<div class="drawer-mask" id="drawerMask" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-head">
+    <div class="dh-avatar"><img id="drawerAvatar" src=""></div>
+    <div class="dh-info"><div class="dh-name" id="drawerName">User</div><div class="dh-email" id="drawerEmail">user@mail.com</div></div>
+  </div>
+  <div class="drawer-items">
+    <button class="di" onclick="openKeyModal()"><i class="fa-solid fa-key"></i> Nhập Key kích hoạt</button>
+    <button class="di danger" onclick="doLogout()"><i class="fa-solid fa-right-from-bracket"></i> Đăng xuất</button>
+  </div>
+  <div class="drawer-foot">© TOOL • BONIOS 2026</div>
+</div>
+
+<div id="game-screen">
+  <div class="gs-header">
+    <button class="gs-close" onclick="closeGame()"><i class="fa-solid fa-arrow-left"></i></button>
+    <div class="gs-title"><img id="gsLogo" src=""><span id="gsName">Tool</span></div>
+    <div class="gs-status" id="gsStatus"><span class="dot"></span></div>
+  </div>
+
+  <iframe id="gameFrame" src="about:blank" class="game-frame"></iframe>
+
+  <div id="md5Panel">
+    <div class="md5-wrap">
+      <div class="md5-title">🎲 DỰ ĐOÁN MD5</div>
+      <div class="md5-sub">Nhập MD5 phiên (32 ký tự hex)</div>
+      <input type="text" id="md5Input" placeholder="a1b2c3d4e5f6..." maxlength="32" autocomplete="off"
+             oninput="this.value=this.value.toLowerCase().replace(/[^a-f0-9]/g,'')">
+      <button class="md5-btn" onclick="runMD5Predict()">🎲 PHÂN TÍCH MD5</button>
+      <div id="md5Loading">⏳ Đang phân tích 18 thuật toán...</div>
+      <div class="md5-split">
+        <div class="md5-box tai">🔵 TÀI<span id="md5TaiPercent">0%</span></div>
+        <div class="md5-box xiu">🔴 XỈU<span id="md5XiuPercent">0%</span></div>
+      </div>
+      <div id="md5Result" class="md5-result"></div>
+      <div class="md5-stats">
+        📊 Số lần: <b id="md5Count">0</b> · 📈 Tỉ lệ: <b id="md5Winrate" class="green">0%</b>
+      </div>
+    </div>
+  </div>
+
+  <div id="robot">
+    <div id="box">
+      <img src="https://i.postimg.cc/j26ZMVPs/IMG-0481.gif" alt="Robot AI" draggable="false">
+      <div id="box-content">
+        <div id="row1"><span id="phien-text">#0:</span><span id="prediction-text">--</span></div>
+        <div id="confidence-text">Tỉ lệ: --%</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="keyModal" onclick="if(event.target===this)closeModal('keyModal')">
+  <div class="sheet" style="max-width:420px"><div class="sheet-grip"></div><h3>NHẬP KEY KÍCH HOẠT</h3>
+  <input type="text" id="keyInput" class="key-input" placeholder="XXXX-XXXX-XXXX">
+  <button class="adm-btn" onclick="activateKey()">KÍCH HOẠT</button></div>
+</div>
+<div class="overlay" id="depositModal" onclick="if(event.target===this)closeModal('depositModal')">
+  <div class="sheet" style="max-width:460px"><div class="sheet-grip"></div><h3>GỬI YÊU CẦU NẠP TIỀN</h3>
+  <input type="number" id="depAmount" class="adm-input" placeholder="Số tiền (VD: 50000)" min="10000">
+  <input type="text" id="depNote" class="adm-input" placeholder="Ghi chú...">
+  <button class="adm-btn" onclick="submitDeposit()">GỬI YÊU CẦU</button></div>
+</div>
+
+<script src="assets/js/config.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>
